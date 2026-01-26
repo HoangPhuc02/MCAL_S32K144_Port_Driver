@@ -1,67 +1,252 @@
-/* Copyright 2023 NXP */
-/* License: BSD 3-clause
-   Redistribution and use in source and binary forms, with or without
-   modification, are permitted provided that the following conditions are met:
-    1. Redistributions of source code must retain the above copyright
-       notice, this list of conditions and the following disclaimer.
-    2. Redistributions in binary form must reproduce the above copyright
-       notice, this list of conditions and the following disclaimer in the
-       documentation and/or other materials provided with the distribution.
-    3. Neither the name of the copyright holder nor the
-       names of its contributors may be used to endorse or promote products
-       derived from this software without specific prior written permission.
+/*==================================================================================================
+*   Project              : MCAL_PORT_S32K144
+*   Platform             : CORTEXM
+*   Peripheral           : PORT
+*   Dependencies         : none
+*
+*   SW Version           : 1.0.0
+*   Author               : PhucPH32
+*
+*   Description          : Main application to test AUTOSAR Port driver on S32K144 EVB
+==================================================================================================*/
 
-   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-   POSSIBILITY OF SUCH DAMAGE.
-*/
-
-/*
- * main implementation: use this 'C' sample to create your own application
- *
- */
+/*==================================================================================================
+*                                        INCLUDE FILES
+==================================================================================================*/
 #include "S32K144.h"
+#include "Port.h"
+#include "Port_Hw.h"
 
-#if defined (__ghs__)
-    #define __INTERRUPT_SVC  __interrupt
-    #define __NO_RETURN _Pragma("ghs nowarning 111")
-#elif defined (__ICCARM__)
-    #define __INTERRUPT_SVC  __svc
-    #define __NO_RETURN _Pragma("diag_suppress=Pe111")
-#elif defined (__GNUC__)
-    #define __INTERRUPT_SVC  __attribute__ ((interrupt ("SVC")))
-    #define __NO_RETURN
-#else
-    #define __INTERRUPT_SVC
-    #define __NO_RETURN
-#endif
+/*==================================================================================================
+*                                       LOCAL MACROS
+==================================================================================================*/
+/**
+* @brief S32K144 EVB LED Pin Definitions (Active LOW - LED ON when pin LOW)
+*        Note: Pin Index in Port configuration (based on Port_VS_0_PBcfg.c)
+*/
+#define LED_BLUE_PIN_INDEX      (0U)    /**< @brief PTD0 - Blue LED (First configured pin) */
 
-int counter, accumulator = 0, limit_value = 1000000;
+/**
+* @brief Physical pin definitions for GPIO access
+*/
+#define LED_BLUE_PIN            (0U)    /**< @brief PTD0 - Blue LED */
+#define LED_RED_PIN             (15U)   /**< @brief PTD15 - Red LED */
+#define LED_GREEN_PIN           (16U)   /**< @brief PTD16 - Green LED */
 
-int main(void) {
-    counter = 0;
+/**
+* @brief Delay loop count
+*/
+#define DELAY_COUNT             (500000UL)
 
-    for (;;) {
-        counter++;
+/*==================================================================================================
+*                                    EXTERNAL DECLARATIONS
+==================================================================================================*/
+extern const Port_ConfigType Port_Config_VS_0;
 
-        if (counter >= limit_value) {
-            __asm volatile ("svc 0");
-            counter = 0;
-        }
+/*==================================================================================================
+*                                   LOCAL FUNCTION PROTOTYPES
+==================================================================================================*/
+static void Delay(uint32 count);
+static void Test_Port_Init(void);
+static void Test_Port_SetPinDirection(void);
+static void Test_Port_SetPinMode(void);
+static void Test_Port_RefreshPortDirection(void);
+static void Test_Port_GetVersionInfo(void);
+static void Led_Toggle(void);
+
+/*==================================================================================================
+*                                       LOCAL FUNCTIONS
+==================================================================================================*/
+/**
+* @brief Simple software delay
+* @param count - delay loop count
+*/
+static void Delay(uint32 count)
+{
+    volatile uint32 i;
+    for (i = 0U; i < count; i++)
+    {
+        /* Wait */
     }
-    /* to avoid the warning message for GHS and IAR: statement is unreachable*/
-    __NO_RETURN
-    return 0;
 }
 
-__INTERRUPT_SVC void SVC_Handler() {
-    accumulator += counter;
+/**
+* @brief Toggle LED using direct GPIO register access
+*/
+static void Led_Toggle(void)
+{
+    PTD->PTOR = (1UL << LED_BLUE_PIN);
+}
+
+/**
+* @brief Test Port_Init function
+* @details Initialize Port driver with configuration from Port_Config_VS_0
+*/
+static void Test_Port_Init(void)
+{
+    /* Call AUTOSAR Port_Init with post-build configuration */
+    Port_Init(&Port_Config_VS_0);
+
+    /* After initialization, toggle LED to indicate success */
+    for (uint8 i = 0U; i < 3U; i++)
+    {
+        Led_Toggle();
+        Delay(DELAY_COUNT);
+    }
+}
+
+/**
+* @brief Test Port_SetPinDirection function
+* @details Change pin direction at runtime (if direction changeable is enabled)
+*/
+static void Test_Port_SetPinDirection(void)
+{
+#if (STD_ON == PORT_SET_PIN_DIRECTION_API)
+    /* Change LED pin direction to INPUT */
+    Port_SetPinDirection(LED_BLUE_PIN_INDEX, PORT_PIN_IN);
+    Delay(DELAY_COUNT);
+
+    /* Change LED pin direction back to OUTPUT */
+    Port_SetPinDirection(LED_BLUE_PIN_INDEX, PORT_PIN_OUT);
+
+    /* Toggle LED to confirm direction change worked */
+    for (uint8 i = 0U; i < 4U; i++)
+    {
+        Led_Toggle();
+        Delay(DELAY_COUNT / 2U);
+    }
+#endif /* PORT_SET_PIN_DIRECTION_API */
+}
+
+/**
+* @brief Test Port_SetPinMode function
+* @details Change pin mode (mux) at runtime (if mode changeable is enabled)
+*/
+static void Test_Port_SetPinMode(void)
+{
+#if (STD_ON == PORT_SET_PIN_MODE_API)
+    /* Change LED pin to ALT0 (disable GPIO) */
+    Port_SetPinMode(LED_BLUE_PIN_INDEX, PORT_ALT0_FUNC_MODE);
+    Delay(DELAY_COUNT);
+
+    /* Restore LED pin to GPIO mode */
+    Port_SetPinMode(LED_BLUE_PIN_INDEX, PORT_GPIO_MODE);
+
+    /* Toggle LED to confirm mode change worked */
+    for (uint8 i = 0U; i < 5U; i++)
+    {
+        Led_Toggle();
+        Delay(DELAY_COUNT / 3U);
+    }
+#endif /* PORT_SET_PIN_MODE_API */
+}
+
+/**
+* @brief Test Port_RefreshPortDirection function
+* @details Refresh all pins direction to configured values
+*          (excludes pins with direction changeable enabled)
+*/
+static void Test_Port_RefreshPortDirection(void)
+{
+    /* First, manually change direction (if allowed) */
+#if (STD_ON == PORT_SET_PIN_DIRECTION_API)
+    Port_SetPinDirection(LED_BLUE_PIN_INDEX, PORT_PIN_IN);
+    Delay(DELAY_COUNT / 2U);
+#endif
+
+    /* Now refresh port direction - should restore original direction
+       Note: Only pins with DirectionChangeable = FALSE will be refreshed */
+    Port_RefreshPortDirection();
+
+    /* Toggle LED to confirm refresh worked */
+    for (uint8 i = 0U; i < 2U; i++)
+    {
+        Led_Toggle();
+        Delay(DELAY_COUNT);
+    }
+}
+
+/**
+* @brief Test Port_GetVersionInfo function
+* @details Get Port driver version information
+*/
+static void Test_Port_GetVersionInfo(void)
+{
+#if (STD_ON == PORT_VERSION_INFO_API)
+    Std_VersionInfoType versionInfo;
+
+    /* Get version information */
+    Port_GetVersionInfo(&versionInfo);
+
+    /* Check version info - blink LED based on major version */
+    for (uint8 i = 0U; i < versionInfo.sw_major_version; i++)
+    {
+        Led_Toggle();
+        Delay(DELAY_COUNT / 4U);
+        Led_Toggle();
+        Delay(DELAY_COUNT / 4U);
+    }
+
+    Delay(DELAY_COUNT);
+#endif /* PORT_VERSION_INFO_API */
+}
+
+/*==================================================================================================
+*                                       GLOBAL FUNCTIONS
+==================================================================================================*/
+/**
+* @brief Main function - AUTOSAR Port driver test application
+*/
+int main(void)
+{
+    /*==========================================================================
+    * Test 1: Port_Init
+    * - Initialize Port driver with post-build configuration
+    * - Configuration defined in Port_VS_0_PBcfg.c
+    * - PTD0 (Blue LED) configured as GPIO Output
+    *==========================================================================*/
+    Test_Port_Init();
+    Delay(DELAY_COUNT);
+
+    /*==========================================================================
+    * Main test loop
+    *==========================================================================*/
+    while(1)
+    {
+        /*======================================================================
+        * Test 2: Port_SetPinDirection
+        * - Change pin direction at runtime
+        * - Requires PORT_SET_PIN_DIRECTION_API = STD_ON
+        * - Requires pin's DirectionChangeable = TRUE
+        *======================================================================*/
+        Test_Port_SetPinDirection();
+        Delay(DELAY_COUNT);
+
+        /*======================================================================
+        * Test 3: Port_SetPinMode
+        * - Change pin mux mode at runtime
+        * - Requires PORT_SET_PIN_MODE_API = STD_ON
+        * - Requires pin's ModeChangeable = TRUE
+        *======================================================================*/
+        Test_Port_SetPinMode();
+        Delay(DELAY_COUNT);
+
+        /*======================================================================
+        * Test 4: Port_RefreshPortDirection
+        * - Refresh all pins to configured direction
+        * - Excludes pins with DirectionChangeable = TRUE
+        *======================================================================*/
+        Test_Port_RefreshPortDirection();
+        Delay(DELAY_COUNT);
+
+        /*======================================================================
+        * Test 5: Port_GetVersionInfo
+        * - Get Port driver version information
+        * - Requires PORT_VERSION_INFO_API = STD_ON
+        *======================================================================*/
+        Test_Port_GetVersionInfo();
+        Delay(DELAY_COUNT * 2U);
+    }
+
+    return 0;
 }

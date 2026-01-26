@@ -1,0 +1,16 @@
+-c
+-I"E:/Workspace/libary_emb/C-C++/S32DS_EBTresos_Workspace/MCAL_PORT_S32K144/include"
+-I"E:/Workspace/libary_emb/C-C++/S32DS_EBTresos_Workspace/MCAL_PORT_S32K144/Board/Driver/HW_Port"
+-I"E:/Workspace/libary_emb/C-C++/S32DS_EBTresos_Workspace/MCAL_PORT_S32K144/BSW/MCAL/Driver/Port"
+-I"E:/Workspace/libary_emb/C-C++/S32DS_EBTresos_Workspace/MCAL_PORT_S32K144/BSW/MCAL/Config/Common"
+-I"E:/Workspace/libary_emb/C-C++/S32DS_EBTresos_Workspace/MCAL_PORT_S32K144/BSW/MCAL/Config/Port"
+-I"E:/Workspace/libary_emb/C-C++/S32DS_EBTresos_Workspace/MCAL_PORT_S32K144/BSW/MCAL/Stub/Det"
+-I"E:/Workspace/libary_emb/C-C++/S32DS_EBTresos_Workspace/MCAL_PORT_S32K144/BSW/MCAL/Stub/Dio"
+-I"E:/Workspace/libary_emb/C-C++/S32DS_EBTresos_Workspace/MCAL_PORT_S32K144/BSW/MCAL/Stub/Mcu"
+-x assembler-with-cpp
+-DSTART_FROM_FLASH
+-g3
+-mcpu=cortex-m4
+-mfloat-abi=soft
+-specs=nosys.specs
+--sysroot="E:/App/S32DS/S32DS/build_tools/gcc_v9.2/gcc-9.2-arm32-eabi/arm-none-eabi/newlib"

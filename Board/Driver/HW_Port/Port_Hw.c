@@ -34,7 +34,8 @@ extern "C" {
 * 3) internal and external interfaces from this unit
 ==================================================================================================*/
 #include "Port_Hw.h"
-
+#include "S32K144.h"
+#include "SchM_Port.h"
 /*==================================================================================================
 *                              SOURCE FILE VERSION INFORMATION
 ==================================================================================================*/
@@ -96,7 +97,7 @@ extern "C" {
 /**
 * @brief Base address array for PORT instances
 */
-PORT_Type* const Port_Hw_g_PortBaseAddr_ptr[PORT_HW_PORT_COUNT_U8] =
+PORT_Type* const PortHw_g_PortBaseAddr_ptr[PORT_HW_PORT_COUNT_U8] =
 {
     PORTA,  /**< @brief Port A base address */
     PORTB,  /**< @brief Port B base address */
@@ -108,7 +109,7 @@ PORT_Type* const Port_Hw_g_PortBaseAddr_ptr[PORT_HW_PORT_COUNT_U8] =
 /**
 * @brief Base address array for GPIO instances
 */
-GPIO_Type* const Port_Hw_g_GpioBaseAddr_ptr[PORT_HW_PORT_COUNT_U8] =
+GPIO_Type* const PortHw_g_GpioBaseAddr_ptr[PORT_HW_PORT_COUNT_U8] =
 {
     PTA,    /**< @brief GPIO A base address */
     PTB,    /**< @brief GPIO B base address */
@@ -129,11 +130,18 @@ GPIO_Type* const Port_Hw_g_GpioBaseAddr_ptr[PORT_HW_PORT_COUNT_U8] =
 *
 * @details     Internal function to configure one pin with all its settings
 *
-* @param[in]   Config_pst  Pointer to pin configuration structure
+* @param[in]   Config_ptr  Pointer to pin configuration structure
 *
 * @return      void
 */
-static void Port_Hw_PinInit(const Port_Hw_PinSettingsConfigType* Config_pst);
+#define PORT_START_SEC_CODE
+#include "Port_MemMap.h"
+static void PortHw_PinInit(const PortHw_PinSettingsConfigType* Config_ptr);
+static void PortHw_Init_UnusedPins(
+    uint16 NumUnusedPins_u16,
+    const uint16* UnusedPads_ptr,
+    const PortHw_UnusedPinConfigType* UnusedPadConfig_ptr
+);
 
 /*==================================================================================================
 *                                       LOCAL FUNCTIONS
@@ -149,84 +157,84 @@ static void Port_Hw_PinInit(const Port_Hw_PinSettingsConfigType* Config_pst);
 *              - Digital filter
 *              - GPIO direction and initial value
 *
-* @param[in]   Config_pst  Pointer to pin configuration structure
+* @param[in]   Config_ptr  Pointer to pin configuration structure
 *
 * @return      void
 */
-static void Port_Hw_PinInit(const Port_Hw_PinSettingsConfigType* Config_pst)
+static void PortHw_PinInit(const PortHw_PinSettingsConfigType* Config_ptr)
 {
     uint32 f_PinsValues_u32 = 0U;
-    uint32 f_DigitalFilters_u32;
 
     /* Validate input parameters */
-    PORT_HW_DEV_ASSERT(Config_pst != NULL_PTR);
-    PORT_HW_DEV_ASSERT(Config_pst->PinPortIdx_u32 < PORT_HW_PINS_PER_PORT_U8);
+    PORT_HW_DEV_ASSERT(Config_ptr != NULL_PTR);
+    PORT_HW_DEV_ASSERT(Config_ptr->PinPortIndex_u32 < PORT_HW_PINS_PER_PORT_U8);
     /* Check if pin is not locked before configuring */
-    PORT_HW_DEV_ASSERT((Config_pst->PortBase_ptr->PCR[Config_pst->PinPortIdx_u32] & PORT_PCR_LK_MASK) == 0U);
+    PORT_HW_DEV_ASSERT((Config_ptr->PortBase_ptr->PCR[Config_ptr->PinPortIndex_u32] & PORT_PCR_LK_MASK) == 0U);
 
     /* Configure pull resistor */
-    if (Config_pst->PullConfig_en != PORT_HW_PULL_NOT_ENABLED)
+    if (Config_ptr->PullConfig_en != PORT_HW_PULL_NOT_ENABLED)
     {
         f_PinsValues_u32 |= PORT_PCR_PE(1U);
-        f_PinsValues_u32 |= PORT_PCR_PS(Config_pst->PullConfig_en);
+        f_PinsValues_u32 |= PORT_PCR_PS(Config_ptr->PullConfig_en);
     }
 
     /* Configure drive strength */
-    f_PinsValues_u32 |= PORT_PCR_DSE(Config_pst->DriveStrength_en);
+    f_PinsValues_u32 |= PORT_PCR_DSE(Config_ptr->DriveStrength_en);
 
     /* Configure lock register */
-    f_PinsValues_u32 |= PORT_PCR_LK(Config_pst->LockRegister_en);
-
-    /* Configure passive filter */
-    f_PinsValues_u32 |= PORT_PCR_PFE(Config_pst->PassiveFilter_boo ? 1U : 0U);
+    f_PinsValues_u32 |= PORT_PCR_LK(Config_ptr->LockRegister_en);
 
     /* Configure pin mux */
-    f_PinsValues_u32 |= PORT_PCR_MUX(Config_pst->Mux_en);
-
-    /* Configure digital filter */
-    f_DigitalFilters_u32 = Config_pst->PortBase_ptr->DFER;
-    f_DigitalFilters_u32 &= ~(1UL << Config_pst->PinPortIdx_u32);
-    f_DigitalFilters_u32 |= ((uint32)(Config_pst->DigitalFilter_boo ? 1U : 0U) << Config_pst->PinPortIdx_u32);
-    Config_pst->PortBase_ptr->DFER = f_DigitalFilters_u32;
+    f_PinsValues_u32 |= PORT_PCR_MUX(Config_ptr->Mux_en);
 
     /* Configure GPIO if mux is set to GPIO mode */
-    if (PORT_HW_MUX_AS_GPIO == Config_pst->Mux_en)
+    if (PORT_HW_MUX_AS_GPIO == Config_ptr->Mux_en)
     {
         /* Configure output direction */
-        if (PORT_HW_PIN_OUT == Config_pst->Direction_en)
+        if (PORT_HW_PIN_OUT == Config_ptr->Direction_en)
         {
             /* Set initial output value */
-            if ((uint8)1U == Config_pst->InitValue_u8)
+            if ((uint8)1U == Config_ptr->InitValue_u8)
             {
-                Config_pst->GpioBase_ptr->PSOR = (1UL << Config_pst->PinPortIdx_u32);
+                SchM_Enter_Port_PORT_EXCLUSIVE_AREA_01();
+                Config_ptr->GpioBase_ptr->PSOR = (1UL << Config_ptr->PinPortIndex_u32);
+                SchM_Exit_Port_PORT_EXCLUSIVE_AREA_01();
+            }
+            else if((uint8)0U == Config_ptr->InitValue_u8)
+            {
+                SchM_Enter_Port_PORT_EXCLUSIVE_AREA_02();
+                Config_ptr->GpioBase_ptr->PCOR = (1UL << Config_ptr->PinPortIndex_u32);
+                SchM_Exit_Port_PORT_EXCLUSIVE_AREA_02();
             }
             else
             {
-                Config_pst->GpioBase_ptr->PCOR = (1UL << Config_pst->PinPortIdx_u32);
+                /* No action to be done */
             }
 
             /* Set pin direction as output */
-            Config_pst->GpioBase_ptr->PDDR |= (1UL << Config_pst->PinPortIdx_u32);
+            Config_ptr->GpioBase_ptr->PDDR |= (1UL << Config_ptr->PinPortIndex_u32);
         }
         /* Configure input or high-z direction */
         else
         {
             /* Clear pin direction (set as input) */
-            Config_pst->GpioBase_ptr->PDDR &= ~(1UL << Config_pst->PinPortIdx_u32);
+            Config_ptr->GpioBase_ptr->PDDR &= ~(1UL << Config_ptr->PinPortIndex_u32);
 
             /* Enable input for normal input mode */
-            Config_pst->GpioBase_ptr->PIDR &= ~(1UL << Config_pst->PinPortIdx_u32);
+            Config_ptr->GpioBase_ptr->PIDR &= ~(1UL << Config_ptr->PinPortIndex_u32);
 
+            #if 0
             /* Disable input for high-z mode */
-            if (PORT_HW_PIN_HIGH_Z == Config_pst->Direction_en)
+            if (PORT_HW_PIN_HIGH_Z == Config_ptr->Direction_en)
             {
-                Config_pst->GpioBase_ptr->PIDR |= (1UL << Config_pst->PinPortIdx_u32);
+                Config_ptr->GpioBase_ptr->PIDR |= (1UL << Config_ptr->PinPortIndex_u32);
             }
+            #endif
         }
     }
 
     /* Write configuration to PCR register */
-    Config_pst->PortBase_ptr->PCR[Config_pst->PinPortIdx_u32] = f_PinsValues_u32;
+    Config_ptr->PortBase_ptr->PCR[Config_ptr->PinPortIndex_u32] = f_PinsValues_u32;
 }
 
 /*==================================================================================================
@@ -234,42 +242,131 @@ static void Port_Hw_PinInit(const Port_Hw_PinSettingsConfigType* Config_pst)
 ==================================================================================================*/
 /*FUNCTION**********************************************************************
 *
-* Function Name : Port_Hw_Init
+* Function Name : PortHw_Init
 * Description   : Initializes multiple pins with the given configuration array
+*                 and unused pins configuration
 *
-* @implements Port_Hw_Init_Activity
+* @implements PortHw_Init_Activity
 ******************************************************************************/
-Port_Hw_StatusType Port_Hw_Init(
+void PortHw_Init(
     uint32 PinCount_u32,
-    const Port_Hw_PinSettingsConfigType Config_pst[]
+    const PortHw_PinSettingsConfigType Config_ptr[],
+    uint16 NumUnusedPins_u16,
+    const uint16* UnusedPads_ptr,
+    const PortHw_UnusedPinConfigType* UnusedPadConfig_ptr
+
+    const Port_ConfigType * pConfigPtr
 )
 {
     uint32 f_Index_u32;
 
     /* Validate input parameters */
-    PORT_HW_DEV_ASSERT(Config_pst != NULL_PTR);
+    PORT_HW_DEV_ASSERT(Config_ptr != NULL_PTR);
     PORT_HW_DEV_ASSERT(PinCount_u32 > 0U);
 
-    /* Initialize each pin with its configuration */
+    /* Initialize each configured pin with its configuration */
     for (f_Index_u32 = 0U; f_Index_u32 < PinCount_u32; f_Index_u32++)
     {
-        Port_Hw_PinInit(&Config_pst[f_Index_u32]);
+        PortHw_PinInit(&Config_ptr[f_Index_u32]);
     }
 
-    return PORT_HW_STATUS_SUCCESS;
+    /* Initialize All Unused Port Pins */
+    if ((NumUnusedPins_u16 > 0U) && (UnusedPads_ptr != NULL_PTR) && (UnusedPadConfig_ptr != NULL_PTR))
+    {
+        PortHw_Init_UnusedPins(NumUnusedPins_u16, UnusedPads_ptr, UnusedPadConfig_ptr);
+    }
 }
 
 /*FUNCTION**********************************************************************
 *
-* Function Name : Port_Hw_SetMuxModeSel
-* Description   : Configures the pin multiplexing (alternate function)
+* Function Name : PortHw_Init_UnusedPins
+* Description   : Initializes all unused port pins with the configuration
+*                 set pointed to by the parameter UnusedPadConfig_ptr
 *
-* @implements Port_Hw_SetMuxModeSel_Activity
+* @implements PortHw_Init_UnusedPins_Activity
 ******************************************************************************/
-void Port_Hw_SetMuxModeSel(
+static void PortHw_Init_UnusedPins(
+    uint16 NumUnusedPins_u16,
+    const uint16* UnusedPads_ptr,
+    const PortHw_UnusedPinConfigType* UnusedPadConfig_ptr
+)
+{
+    uint16 f_PinIndex_u16;
+    uint32 f_PortIndex_u32;
+    uint32 f_PinInPort_u32;
+    uint8  f_OutputValue_u8;
+    uint32 f_PcrValue_u32;
+    PortHw_DirectionType f_Direction_en;
+
+    /* Get unused pin configuration */
+    f_OutputValue_u8 = UnusedPadConfig_ptr->OutputValue_u8;
+    f_PcrValue_u32   = UnusedPadConfig_ptr->PinControlRegister_u32;
+    f_Direction_en   = UnusedPadConfig_ptr->Direction_en;
+
+    /* Initialize All UnUsed pins */
+    for (f_PinIndex_u16 = 0U; f_PinIndex_u16 < NumUnusedPins_u16; f_PinIndex_u16++)
+    {
+        /* Get port index and pin index within the port */
+        f_PortIndex_u32 = PORT_HW_GET_PORT_U32(UnusedPads_ptr[f_PinIndex_u16]);
+        f_PinInPort_u32 = PORT_HW_GET_PIN_U32(UnusedPads_ptr[f_PinIndex_u16]);
+
+        /* Check if the direction of the pin is OUTPUT */
+        if (PORT_HW_PIN_OUT == f_Direction_en)
+        {
+            /* Set pin to High value */
+            if ((uint8)1U == f_OutputValue_u8)
+            {
+                SchM_Enter_Port_PORT_EXCLUSIVE_AREA_03();
+                PortHw_g_GpioBaseAddr_ptr[f_PortIndex_u32]->PSOR = ((uint32)1U << f_PinInPort_u32);
+                SchM_Exit_Port_PORT_EXCLUSIVE_AREA_03();
+            }
+            else if ((uint8)0U == f_OutputValue_u8)
+            {
+                SchM_Enter_Port_PORT_EXCLUSIVE_AREA_04();
+                PortHw_g_GpioBaseAddr_ptr[f_PortIndex_u32]->PCOR = ((uint32)1U << f_PinInPort_u32);
+                SchM_Exit_Port_PORT_EXCLUSIVE_AREA_04();
+            }
+            else
+            {
+                /* No action to be done */
+            }
+
+            /* Set pin as output */
+            SchM_Enter_Port_PORT_EXCLUSIVE_AREA_05();
+            PortHw_g_GpioBaseAddr_ptr[f_PortIndex_u32]->PDDR |= ((uint32)1U << f_PinInPort_u32);
+            SchM_Exit_Port_PORT_EXCLUSIVE_AREA_05();
+        }
+        /* The direction of pin is INPUT */
+        else
+        {
+            /* Set pin as input */
+            SchM_Enter_Port_PORT_EXCLUSIVE_AREA_06();
+            PortHw_g_GpioBaseAddr_ptr[f_PortIndex_u32]->PDDR &= ~((uint32)1U << f_PinInPort_u32);
+            SchM_Exit_Port_PORT_EXCLUSIVE_AREA_06();
+
+            /* Enable input */
+            SchM_Enter_Port_PORT_EXCLUSIVE_AREA_07();
+            PortHw_g_GpioBaseAddr_ptr[f_PortIndex_u32]->PIDR &= ~((uint32)1U << f_PinInPort_u32);
+            SchM_Exit_Port_PORT_EXCLUSIVE_AREA_07();
+        }
+
+        /* Write PCR configuration from Configuration tool */
+        PortHw_g_PortBaseAddr_ptr[f_PortIndex_u32]->PCR[f_PinInPort_u32] = f_PcrValue_u32;
+    }
+}
+
+/*FUNCTION**********************************************************************
+*
+* Function Name : PortHw_SetMuxModeSel
+* Description   : Configures the pin multiplexing (alternate function)
+*                 Based on Port_Ipw_SetPinMode
+*
+* @implements PortHw_SetMuxModeSel_Activity
+******************************************************************************/
+void PortHw_SetMuxModeSel(
     PORT_Type* const Base_ptr,
     uint32 Pin_u32,
-    Port_Hw_MuxType Mux_en
+    PortHw_MuxType Mux_en
 )
 {
     uint32 f_RegValue_u32;
@@ -279,113 +376,68 @@ void Port_Hw_SetMuxModeSel(
     PORT_HW_DEV_ASSERT(Pin_u32 < PORT_HW_PINS_PER_PORT_U8);
     PORT_HW_DEV_ASSERT((Base_ptr->PCR[Pin_u32] & PORT_PCR_LK_MASK) == 0U);
 
+    /* Enter critical section - Sets the port pin mode */
+    SchM_Enter_Port_PORT_EXCLUSIVE_AREA_08();
+
     /* Read current PCR value, modify MUX field, write back */
     f_RegValue_u32 = Base_ptr->PCR[Pin_u32];
     f_RegValue_u32 &= ~PORT_PCR_MUX_MASK;
     f_RegValue_u32 |= PORT_PCR_MUX(Mux_en);
     Base_ptr->PCR[Pin_u32] = f_RegValue_u32;
+
+    /* Exit critical section */
+    SchM_Exit_Port_PORT_EXCLUSIVE_AREA_08();
 }
 
 /*FUNCTION**********************************************************************
 *
-* Function Name : Port_Hw_SetPinDirection
+* Function Name : PortHw_SetPinDirection
 * Description   : Sets the direction of a GPIO pin
+*                 Based on Port_Ipw_SetPinDirection
 *
-* @implements Port_Hw_SetPinDirection_Activity
+* @implements PortHw_SetPinDirection_Activity
 ******************************************************************************/
-void Port_Hw_SetPinDirection(
+void PortHw_SetPinDirection(
     GPIO_Type* const Base_ptr,
     uint32 Pin_u32,
-    Port_Hw_DirectionType Direction_en
+    PortHw_DirectionType Direction_en
 )
 {
     /* Validate input parameters */
     PORT_HW_DEV_ASSERT(Base_ptr != NULL_PTR);
     PORT_HW_DEV_ASSERT(Pin_u32 < PORT_HW_PINS_PER_PORT_U8);
 
+    /* Configures Port Pin as Output */
     if (PORT_HW_PIN_OUT == Direction_en)
     {
-        /* Set pin as output */
-        Base_ptr->PDDR |= (1UL << Pin_u32);
+        SchM_Enter_Port_PORT_EXCLUSIVE_AREA_09();
+        Base_ptr->PDDR |= ((uint32)1UL << Pin_u32);
+        SchM_Exit_Port_PORT_EXCLUSIVE_AREA_09();
+    }
+    /* Configures Port Pin as Input or High-Z */
+    else if ((PORT_HW_PIN_IN == Direction_en) || (PORT_HW_PIN_HIGH_Z == Direction_en))
+    {
+        /* Set pin as input - clear direction bit */
+        SchM_Enter_Port_PORT_EXCLUSIVE_AREA_09();
+        Base_ptr->PDDR &= ~((uint32)1UL << Pin_u32);
+        SchM_Exit_Port_PORT_EXCLUSIVE_AREA_09();
+
+        /* Enable/Disable input based on direction mode */
+        SchM_Enter_Port_PORT_EXCLUSIVE_AREA_10();
+        /* First enable input */
+        Base_ptr->PIDR &= ~((uint32)1UL << Pin_u32);
+
+        /* Check if the pin is HIGH-Z. In this case disable port input in PIDR register */
+        if (PORT_HW_PIN_HIGH_Z == Direction_en)
+        {
+            Base_ptr->PIDR |= ((uint32)1UL << Pin_u32);
+        }
+        SchM_Exit_Port_PORT_EXCLUSIVE_AREA_10();
     }
     else
     {
-        /* Set pin as input */
-        Base_ptr->PDDR &= ~(1UL << Pin_u32);
-
-        /* Enable input */
-        Base_ptr->PIDR &= ~(1UL << Pin_u32);
-
-        /* Disable input for high-z mode */
-        if (PORT_HW_PIN_HIGH_Z == Direction_en)
-        {
-            Base_ptr->PIDR |= (1UL << Pin_u32);
-        }
+        /* Do nothing for PORT_HW_PIN_DISABLED or invalid direction */
     }
-}
-
-/*FUNCTION**********************************************************************
-*
-* Function Name : Port_Hw_EnableDigitalFilter
-* Description   : Enables digital filter for a specific pin
-*
-* @implements Port_Hw_EnableDigitalFilter_Activity
-******************************************************************************/
-void Port_Hw_EnableDigitalFilter(
-    PORT_Type* const Base_ptr,
-    uint32 Pin_u32
-)
-{
-    /* Validate input parameters */
-    PORT_HW_DEV_ASSERT(Base_ptr != NULL_PTR);
-    PORT_HW_DEV_ASSERT(Pin_u32 < PORT_HW_PINS_PER_PORT_U8);
-
-    /* Set digital filter enable bit for the pin */
-    Base_ptr->DFER |= (1UL << Pin_u32);
-}
-
-/*FUNCTION**********************************************************************
-*
-* Function Name : Port_Hw_DisableDigitalFilter
-* Description   : Disables digital filter for a specific pin
-*
-* @implements Port_Hw_DisableDigitalFilter_Activity
-******************************************************************************/
-void Port_Hw_DisableDigitalFilter(
-    PORT_Type* const Base_ptr,
-    uint32 Pin_u32
-)
-{
-    /* Validate input parameters */
-    PORT_HW_DEV_ASSERT(Base_ptr != NULL_PTR);
-    PORT_HW_DEV_ASSERT(Pin_u32 < PORT_HW_PINS_PER_PORT_U8);
-
-    /* Clear digital filter enable bit for the pin */
-    Base_ptr->DFER &= ~(1UL << Pin_u32);
-}
-
-/*FUNCTION**********************************************************************
-*
-* Function Name : Port_Hw_ConfigDigitalFilter
-* Description   : Configures digital filter with given parameters
-*
-* @implements Port_Hw_ConfigDigitalFilter_Activity
-******************************************************************************/
-void Port_Hw_ConfigDigitalFilter(
-    PORT_Type* const Base_ptr,
-    const Port_Hw_DigitalFilterConfigType* Config_pst
-)
-{
-    /* Validate input parameters */
-    PORT_HW_DEV_ASSERT(Base_ptr != NULL_PTR);
-    PORT_HW_DEV_ASSERT(Config_pst != NULL_PTR);
-    PORT_HW_DEV_ASSERT(Config_pst->Width_u8 <= PORT_DFWR_FILT_MASK);
-
-    /* Configure digital filter clock source */
-    Base_ptr->DFCR = PORT_DFCR_CS(Config_pst->Clock_u8);
-
-    /* Configure digital filter width */
-    Base_ptr->DFWR = PORT_DFWR_FILT(Config_pst->Width_u8);
 }
 
 /*FUNCTION**********************************************************************
@@ -395,11 +447,11 @@ void Port_Hw_ConfigDigitalFilter(
 *
 * @implements Port_Hw_SetGlobalPinControl_Activity
 ******************************************************************************/
-void Port_Hw_SetGlobalPinControl(
+void PortHw_SetGlobalPinControl(
     PORT_Type* const Base_ptr,
     uint16 Pins_u16,
     uint16 Value_u16,
-    Port_Hw_GlobalControlPinsType HalfPort_en
+    PortHw_GlobalControlPinsType GlobalCtrlPins_en
 )
 {
     uint16 f_Mask_u16 = 0U;
@@ -417,7 +469,7 @@ void Port_Hw_SetGlobalPinControl(
     f_Mask_u16 &= Value_u16;
 
     /* Apply configuration to selected half of pins */
-    switch (HalfPort_en)
+    switch (GlobalCtrlPins_en)
     {
         case PORT_HW_GLOBAL_LOWER_HALF:
             /* Configure lower 16 pins (0-15) */
@@ -443,7 +495,7 @@ void Port_Hw_SetGlobalPinControl(
 *
 * @implements Port_Hw_WritePin_Activity
 ******************************************************************************/
-void Port_Hw_WritePin(
+void PortHw_WritePin(
     GPIO_Type* const Base_ptr,
     uint32 Pin_u32,
     uint8 Value_u8
@@ -472,7 +524,7 @@ void Port_Hw_WritePin(
 *
 * @implements Port_Hw_ReadPin_Activity
 ******************************************************************************/
-uint8 Port_Hw_ReadPin(
+uint8 PortHw_ReadPin(
     const GPIO_Type* const Base_ptr,
     uint32 Pin_u32
 )
@@ -496,7 +548,7 @@ uint8 Port_Hw_ReadPin(
 *
 * @implements Port_Hw_TogglePin_Activity
 ******************************************************************************/
-void Port_Hw_TogglePin(
+void PortHw_TogglePin(
     GPIO_Type* const Base_ptr,
     uint32 Pin_u32
 )
@@ -508,6 +560,9 @@ void Port_Hw_TogglePin(
     /* Toggle pin using Port Toggle Output Register */
     Base_ptr->PTOR = (1UL << Pin_u32);
 }
+
+#define PORT_STOP_SEC_CODE
+#include "Port_MemMap.h"
 
 #ifdef __cplusplus
 }

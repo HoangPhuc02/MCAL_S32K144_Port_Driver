@@ -1,0 +1,14 @@
+-T
+"E:/Workspace/libary_emb/C-C++/S32DS_EBTresos_Workspace/MCAL_PORT_S32K144/Project_Settings/Linker_Files/S32K144_64_flash.ld"
+-Wl,-Map,"MCAL_PORT_S32K144.map"
+-Xlinker
+--gc-sections
+-n
+-mcpu=cortex-m4
+-mfloat-abi=soft
+-specs=nosys.specs
+--sysroot="E:/App/S32DS/S32DS/build_tools/gcc_v9.2/gcc-9.2-arm32-eabi/arm-none-eabi/newlib"
+"./Project_Settings/Startup_Code/startup.o"
+"./Project_Settings/Startup_Code/startup_S32K144.o"
+"./Project_Settings/Startup_Code/system_S32K144.o"
+"./src/main.o"

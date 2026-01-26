@@ -594,9 +594,9 @@ typedef struct {
 /** @brief Main configuration structure */
 typedef struct {
     uint16                              NumPins_u16;        /**< Number of configured pins */
-    const Port_PinConfigType*           PinConfig_pst;      /**< Pointer to pin configs */
+    const Port_PinConfigType*           PinConfig_ptr;      /**< Pointer to pin configs */
     const uint8*                        PartitionList_pu8;  /**< Partition mapping */
-    const Port_Hw_PinSettingsConfigType* IpConfig_pst;      /**< IPL configuration */
+    const Port_Hw_PinSettingsConfigType* IpConfig_ptr;      /**< IPL configuration */
 } Port_ConfigType;
 
 /*==================================================================================================
@@ -648,7 +648,7 @@ void Port_Init(...) { Port_Ipw_Init(ConfigPtr); }
 /* AFTER (direct to IPL): */
 #include "Port_Hw.h"
 void Port_Init(...) { 
-    Port_Hw_Init(ConfigPtr->NumPins_u16, ConfigPtr->IpConfig_pst); 
+    Port_Hw_Init(ConfigPtr->NumPins_u16, ConfigPtr->IpConfig_ptr); 
 }
 ```
 

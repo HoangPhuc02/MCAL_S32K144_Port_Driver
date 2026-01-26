@@ -37,7 +37,8 @@ extern "C" {
 * 3) internal and external interfaces from this unit
 ==================================================================================================*/
 #include "device_registers.h"
-
+#include "S32K144.h"
+#include "Std_Types.h"
 /*==================================================================================================
 *                              SOURCE FILE VERSION INFORMATION
 ==================================================================================================*/
@@ -87,7 +88,7 @@ typedef enum Port_Hw_StatusType_t
 {
     PORT_HW_STATUS_SUCCESS = 0U,    /**< @brief Operation completed successfully */
     PORT_HW_STATUS_ERROR   = 1U     /**< @brief Operation failed with error */
-} Port_Hw_StatusType;
+} PortHw_StatusType;
 
 /**
 * @brief   Port Pin Pull Configuration Type
@@ -98,7 +99,7 @@ typedef enum Port_Hw_PullConfigType_t
     PORT_HW_PULL_DOWN_ENABLED   = 0U,   /**< @brief Internal pull-down resistor enabled */
     PORT_HW_PULL_UP_ENABLED     = 1U,   /**< @brief Internal pull-up resistor enabled */
     PORT_HW_PULL_NOT_ENABLED    = 2U    /**< @brief Internal pull resistor disabled */
-} Port_Hw_PullConfigType;
+} PortHw_PullConfigType;
 
 /**
 * @brief   Port Pin Mux Configuration Type
@@ -114,7 +115,7 @@ typedef enum Port_Hw_MuxType_t
     PORT_HW_MUX_ALT5            = 5U,   /**< @brief Alternate function 5 */
     PORT_HW_MUX_ALT6            = 6U,   /**< @brief Alternate function 6 */
     PORT_HW_MUX_ALT7            = 7U    /**< @brief Alternate function 7 */
-} Port_Hw_MuxType;
+} PortHw_MuxType;
 
 /**
 * @brief   Port Pin Direction Type
@@ -125,8 +126,10 @@ typedef enum Port_Hw_DirectionType_t
     PORT_HW_PIN_DISABLED        = 0U,   /**< @brief Pin disabled (ALT0 mode) */
     PORT_HW_PIN_IN              = 1U,   /**< @brief Pin configured as input */
     PORT_HW_PIN_OUT             = 2U,   /**< @brief Pin configured as output */
+    #if 0 
     PORT_HW_PIN_HIGH_Z          = 3U    /**< @brief Pin configured as high impedance */
-} Port_Hw_DirectionType;
+    #endif 
+} PortHw_DirectionType;
 
 /**
 * @brief   Port Pin Drive Strength Type
@@ -136,7 +139,7 @@ typedef enum Port_Hw_DriveStrengthType_t
 {
     PORT_HW_DRIVE_STRENGTH_LOW  = 0U,   /**< @brief Low drive strength */
     PORT_HW_DRIVE_STRENGTH_HIGH = 1U    /**< @brief High drive strength */
-} Port_Hw_DriveStrengthType;
+} PortHw_DriveStrengthType;
 
 /**
 * @brief   Port Pin Lock Register Type
@@ -146,7 +149,7 @@ typedef enum Port_Hw_LockRegisterType_t
 {
     PORT_HW_LOCK_DISABLED       = 0U,   /**< @brief Pin configuration is not locked */
     PORT_HW_LOCK_ENABLED        = 1U    /**< @brief Pin configuration is locked */
-} Port_Hw_LockRegisterType;
+} PortHw_LockRegisterType;
 
 /**
 * @brief   Port Global Control Half Pins Type
@@ -156,7 +159,7 @@ typedef enum Port_Hw_GlobalControlPinsType_t
 {
     PORT_HW_GLOBAL_LOWER_HALF   = 0U,   /**< @brief Lower 16 pins (0-15) */
     PORT_HW_GLOBAL_UPPER_HALF   = 1U    /**< @brief Upper 16 pins (16-31) */
-} Port_Hw_GlobalControlPinsType;
+} PortHw_GlobalControlPinsType;
 
 /*==================================================================================================
 *                                 STRUCTURES AND OTHER TYPEDEFS
@@ -165,19 +168,19 @@ typedef enum Port_Hw_GlobalControlPinsType_t
 * @brief   Port Pin Level Type
 * @details Type for representing pin output level (HIGH/LOW)
 */
-typedef uint8 Port_Hw_PinLevelType;
+typedef uint8 PortHw_PortPinsLevelType;
 
 /**
-* @brief   Digital Filter Configuration Structure
-* @details Structure for configuring digital filter on PORT pins
+* @brief   Unused Pin Configuration Structure
+* @details Configuration structure for unused pins
 */
-typedef struct Port_Hw_DigitalFilterConfigType_t
+typedef struct PortHw_UnusedPinConfigType_t
 {
-    uint8   Port_u8;            /**< @brief Digital Filter Port index */
-    uint8   Clock_u8;           /**< @brief Digital Filter Clock source (0=Bus, 1=LPO) */
-    uint8   Width_u8;           /**< @brief Digital Filter Width (filter length) */
-    uint32  PinMask_u32;        /**< @brief Bitmask of pins for which digital filter is enabled */
-} Port_Hw_DigitalFilterConfigType;
+    uint32                  PinControlRegister_u32; /**< @brief Content of PCR Register */
+    PortHw_DirectionType    Direction_en;           /**< @brief Pin direction */
+    uint8                   OutputValue_u8;         /**< @brief Pin output value */
+} PortHw_UnusedPinConfigType;
+
 
 /**
 * @brief   Port Pin Settings Configuration Structure
@@ -187,16 +190,14 @@ typedef struct Port_Hw_PinSettingsConfigType_t
 {
     PORT_Type*                  PortBase_ptr;       /**< @brief Pointer to PORT peripheral base */
     GPIO_Type*                  GpioBase_ptr;       /**< @brief Pointer to GPIO peripheral base */
-    uint32                      PinPortIdx_u32;     /**< @brief Pin index within the port (0-31) */
-    Port_Hw_PullConfigType      PullConfig_en;      /**< @brief Pull resistor configuration */
-    Port_Hw_MuxType             Mux_en;             /**< @brief Pin mux (alternate function) */
-    Port_Hw_DirectionType       Direction_en;       /**< @brief Pin direction (in/out/high-z) */
-    Port_Hw_DriveStrengthType   DriveStrength_en;   /**< @brief Output drive strength */
-    boolean                     PassiveFilter_boo;  /**< @brief Passive filter enable */
-    Port_Hw_LockRegisterType    LockRegister_en;    /**< @brief Configuration lock */
-    boolean                     DigitalFilter_boo;  /**< @brief Digital filter enable */
-    Port_Hw_PinLevelType        InitValue_u8;       /**< @brief Initial output value for GPIO */
-} Port_Hw_PinSettingsConfigType;
+    uint32                      PinPortIndex_u32;     /**< @brief Pin index within the port (0-31) */
+    PortHw_PullConfigType      PullConfig_en;      /**< @brief Pull resistor configuration */
+    PortHw_MuxType             Mux_en;             /**< @brief Pin mux (alternate function) */
+    PortHw_DirectionType       Direction_en;       /**< @brief Pin direction (in/out/high-z) */
+    PortHw_DriveStrengthType   DriveStrength_en;   /**< @brief Output drive strength */
+    PortHw_LockRegisterType    LockRegister_en;    /**< @brief Configuration lock */
+    PortHw_PortPinsLevelType        InitValue_u8;       /**< @brief Initial output value for GPIO */
+} PortHw_PinSettingsConfigType;
 
 /*==================================================================================================
 *                                 GLOBAL VARIABLE DECLARATIONS
