@@ -6158,29 +6158,29 @@ typedef struct {
 
 /* GPIO - Peripheral instance base addresses */
 /** Peripheral PTA base address */
-#define PTA_BASE                              (0x400FF000u)
+#define IP_PTA_BASE                              (0x400FF000u)
 /** Peripheral PTA base pointer */
-#define PTA                                   ((GPIO_Type *)PTA_BASE)
+#define IP_PTA                                   ((GPIO_Type *)IP_PTA_BASE)
 /** Peripheral PTB base address */
-#define PTB_BASE                              (0x400FF040u)
+#define IP_PTB_BASE                              (0x400FF040u)
 /** Peripheral PTB base pointer */
-#define PTB                                   ((GPIO_Type *)PTB_BASE)
+#define IP_PTB                                   ((GPIO_Type *)IP_PTB_BASE)
 /** Peripheral PTC base address */
-#define PTC_BASE                              (0x400FF080u)
+#define IP_PTC_BASE                              (0x400FF080u)
 /** Peripheral PTC base pointer */
-#define PTC                                   ((GPIO_Type *)PTC_BASE)
+#define IP_PTC                                   ((GPIO_Type *)IP_PTC_BASE)
 /** Peripheral PTD base address */
-#define PTD_BASE                              (0x400FF0C0u)
+#define IP_PTD_BASE                              (0x400FF0C0u)
 /** Peripheral PTD base pointer */
-#define PTD                                   ((GPIO_Type *)PTD_BASE)
+#define IP_PTD                                   ((GPIO_Type *)IP_PTD_BASE)
 /** Peripheral PTE base address */
-#define PTE_BASE                              (0x400FF100u)
+#define IP_PTE_BASE                              (0x400FF100u)
 /** Peripheral PTE base pointer */
-#define PTE                                   ((GPIO_Type *)PTE_BASE)
+#define IP_PTE                                   ((GPIO_Type *)IP_PTE_BASE)
 /** Array initializer of GPIO peripheral base addresses */
-#define GPIO_BASE_ADDRS                       { PTA_BASE, PTB_BASE, PTC_BASE, PTD_BASE, PTE_BASE }
+#define IP_GPIO_BASE_ADDRS                       { IP_PTA_BASE, IP_PTB_BASE, IP_PTC_BASE, IP_PTD_BASE, IP_PTE_BASE }
 /** Array initializer of GPIO peripheral base pointers */
-#define GPIO_BASE_PTRS                        { PTA, PTB, PTC, PTD, PTE }
+#define IP_GPIO_BASE_PTRS                        { IP_PTA, IP_PTB, IP_PTC, IP_PTD, IP_PTE }
 
 /* ----------------------------------------------------------------------------
    -- GPIO Register Masks
@@ -10592,29 +10592,29 @@ typedef struct {
 
 /* PORT - Peripheral instance base addresses */
 /** Peripheral PORTA base address */
-#define PORTA_BASE                            (0x40049000u)
+#define IP_PORTA_BASE                            (0x40049000u)
 /** Peripheral PORTA base pointer */
-#define PORTA                                 ((PORT_Type *)PORTA_BASE)
+#define IP_PORTA                                 ((PORT_Type *)IP_PORTA_BASE)
 /** Peripheral PORTB base address */
-#define PORTB_BASE                            (0x4004A000u)
+#define IP_PORTB_BASE                            (0x4004A000u)
 /** Peripheral PORTB base pointer */
-#define PORTB                                 ((PORT_Type *)PORTB_BASE)
+#define IP_PORTB                                 ((PORT_Type *)IP_PORTB_BASE)
 /** Peripheral PORTC base address */
-#define PORTC_BASE                            (0x4004B000u)
+#define IP_PORTC_BASE                            (0x4004B000u)
 /** Peripheral PORTC base pointer */
-#define PORTC                                 ((PORT_Type *)PORTC_BASE)
+#define IP_PORTC                                 ((PORT_Type *)IP_PORTC_BASE)
 /** Peripheral PORTD base address */
-#define PORTD_BASE                            (0x4004C000u)
+#define IP_PORTD_BASE                            (0x4004C000u)
 /** Peripheral PORTD base pointer */
-#define PORTD                                 ((PORT_Type *)PORTD_BASE)
+#define IP_PORTD                                 ((PORT_Type *)IP_PORTD_BASE)
 /** Peripheral PORTE base address */
-#define PORTE_BASE                            (0x4004D000u)
+#define IP_PORTE_BASE                            (0x4004D000u)
 /** Peripheral PORTE base pointer */
-#define PORTE                                 ((PORT_Type *)PORTE_BASE)
+#define IP_PORTE                                 ((PORT_Type *)IP_PORTE_BASE)
 /** Array initializer of PORT peripheral base addresses */
-#define PORT_BASE_ADDRS                       { PORTA_BASE, PORTB_BASE, PORTC_BASE, PORTD_BASE, PORTE_BASE }
+#define IP_PORT_BASE_ADDRS                       { IP_PORTA_BASE, IP_PORTB_BASE, IP_PORTC_BASE, IP_PORTD_BASE, IP_PORTE_BASE }
 /** Array initializer of PORT peripheral base pointers */
-#define PORT_BASE_PTRS                        { PORTA, PORTB, PORTC, PORTD, PORTE }
+#define IP_PORT_BASE_PTRS                        { IP_PORTA, IP_PORTB, IP_PORTC, IP_PORTD, IP_PORTE }
 
 /* ----------------------------------------------------------------------------
    -- PORT Register Masks

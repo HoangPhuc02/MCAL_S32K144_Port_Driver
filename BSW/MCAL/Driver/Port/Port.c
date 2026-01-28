@@ -47,12 +47,12 @@ extern "C"{
 *        module's description file
 */
 #define PORT_VENDOR_ID_C                    43
-#define PORT_AR_RELEASE_MAJOR_VERSION_C     4
-#define PORT_AR_RELEASE_MINOR_VERSION_C     4
+#define PORT_AR_RELEASE_MAJOR_VERSION_C     21
+#define PORT_AR_RELEASE_MINOR_VERSION_C     11
 #define PORT_AR_RELEASE_REVISION_VERSION_C  0
 #define PORT_SW_MAJOR_VERSION_C             1
 #define PORT_SW_MINOR_VERSION_C             0
-#define PORT_SW_PATCH_VERSION_C             1
+#define PORT_SW_PATCH_VERSION_C             0
 
 /*=================================================================================================
 *                                     FILE VERSION CHECKS
@@ -111,23 +111,27 @@ extern "C"{
 /*=================================================================================================
 *                                      GLOBAL VARIABLES
 =================================================================================================*/
- #define PORT_START_SEC_VAR_CLEARED_UNSPECIFIED_NO_CACHEABLE
+#if 0 
+#define PORT_START_SEC_VAR_CLEARED_UNSPECIFIED_NO_CACHEABLE
  #include "Port_MemMap.h"
-
+#endif
 static const Port_ConfigType * Port_pConfigPtr = NULL_PTR;
-
+#if 0 
  #define PORT_STOP_SEC_VAR_CLEARED_UNSPECIFIED_NO_CACHEABLE
  #include "Port_MemMap.h"
 
 #define PORT_START_SEC_CONFIG_DATA_UNSPECIFIED
 #include "Port_MemMap.h"
+#endif
 
 #if (STD_ON == PORT_PRECOMPILE_SUPPORT)
     extern const Port_ConfigType Port_Config;
 #endif
 
+#if 0
 #define PORT_STOP_SEC_CONFIG_DATA_UNSPECIFIED
 #include "Port_MemMap.h"
+#endif
 /*=================================================================================================
 *                                   LOCAL FUNCTION PROTOTYPES
 =================================================================================================*/
@@ -159,8 +163,10 @@ void Port_Init
 )
 {
     const Port_ConfigType * pLocalConfigPtr = ConfigPtr;
-
 #if (STD_ON == PORT_DEV_ERROR_DETECT)
+    uint8 CoreId;
+
+    CoreId = (uint8)Port_GetCoreID();
 #if (STD_OFF == PORT_PRECOMPILE_SUPPORT)
     if (NULL_PTR == ConfigPtr)
 #else /*(STD_OFF == PORT_PRECOMPILE_SUPPORT) */
@@ -177,16 +183,14 @@ void Port_Init
 #endif /* (STD_ON == PORT_PRECOMPILE_SUPPORT) */
 
 #if (STD_ON == PORT_DEV_ERROR_DETECT)
-        /* Validate configuration pointer */
-        if ((NULL_PTR == pLocalConfigPtr->IpConfig_ptr) || (0U == pLocalConfigPtr->NumPins_u16))
+        if ((uint32)1 != pLocalConfigPtr->pau8Port_PartitionList[CoreId])
         {
             (void)Det_ReportError((uint16)PORT_MODULE_ID, PORT_INSTANCE_ID, (uint8)PORT_INIT_ID, (uint8)PORT_E_PARAM_CONFIG);
         }
         else
 #endif /* (STD_ON == PORT_DEV_ERROR_DETECT) */
         {
-            /* Initialize Port using Hardware driver */
-            (void)PortHw_Init(pLocalConfigPtr->NumPins_u16, pLocalConfigPtr->IpConfig_ptr);
+            Port_Ipw_Init(pLocalConfigPtr);
 
             /*  Save configuration pointer in global variable */
             Port_pConfigPtr = pLocalConfigPtr;
@@ -213,50 +217,92 @@ void Port_SetPinDirection
     Port_PinDirectionType Direction
 )
 {
-    uint32 PinIndex_u32;
-    PortHw_DirectionType HwDirection_en;
-    GPIO_Type* GpioBase_ptr;
-
 #if (STD_ON == PORT_DEV_ERROR_DETECT)
+    /* Variable used to store current error status */
+    Std_ReturnType ErrStatus;
+
     /* Check if Port module is initialized */
     if (NULL_PTR == Port_pConfigPtr)
     {
         (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_SETPINDIRECTION_ID, (uint8)PORT_E_UNINIT);
     }
-    /* Check if pin is valid */
-    else if (Pin >= Port_pConfigPtr->NumPins_u16)
-    {
-        (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_SETPINDIRECTION_ID, (uint8)PORT_E_PARAM_PIN);
-    }
-    /* Check if direction is changeable */
-    else if ((boolean)FALSE == Port_pConfigPtr->UsedPadConfig_ptr[Pin].DirectionChangeable_bool)
-    {
-        (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_SETPINDIRECTION_ID, (uint8)PORT_E_DIRECTION_UNCHANGEABLE);
-    }
     else
 #endif /* PORT_DEV_ERROR_DETECT */
     {
-        /* Get GPIO base address and pin index */
-        GpioBase_ptr = Port_pConfigPtr->IpConfig_ptr[Pin].GpioBase_ptr;
-        PinIndex_u32 = Port_pConfigPtr->IpConfig_ptr[Pin].PinPortIndex_u32;
+        /* Avoid compiler warning */
+#if (STD_ON == PORT_DEV_ERROR_DETECT)
+        ErrStatus = Port_Ipw_SetPinDirection(Pin, Direction, Port_pConfigPtr);
+#else
+        (void)Port_Ipw_SetPinDirection(Pin, Direction, Port_pConfigPtr);
+#endif
 
-        /* Convert AUTOSAR direction to HW direction */
-        if (PORT_PIN_OUT == Direction)
+#if (STD_ON == PORT_DEV_ERROR_DETECT)
+        if ((Std_ReturnType)E_NOT_OK == ErrStatus)
         {
-            HwDirection_en = PORT_HW_PIN_OUT;
+            (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_SETPINDIRECTION_ID, (uint8)PORT_E_DIRECTION_UNCHANGEABLE);
         }
-        else
-        {
-            HwDirection_en = PORT_HW_PIN_IN;
-        }
-
-        /* Set pin direction using Hardware driver */
-        PortHw_SetPinDirection(GpioBase_ptr, PinIndex_u32, HwDirection_en);
+#endif /* (STD_ON == PORT_DEV_ERROR_DETECT) */
     }
 }
 #endif /* (STD_ON == PORT_SET_PIN_DIRECTION_API) */
 
+#ifdef PORT_SET_2_PINS_DIRECTION_API
+#if (STD_ON == PORT_SET_2_PINS_DIRECTION_API)
+/**
+* @brief   Sets the direction of 2 pins.
+* @details The function @p Port_Set2PinsDirection() will set the port pins direction
+*          during runtime.
+* @pre     @p Port_Init() must have been called first. In order to change the
+*          pin direction the PortPinDirectionChangeable flag must have been set
+*          to @p TRUE for both pins.
+*
+* @param[in] Pin1          Pin 1 ID number.
+* @param[in] Pin2          Pin 2 ID number.
+* @param[in] Direction     Port Pin direction.
+*
+* Port_Set2PinsDirection_Activity
+* @api
+*/
+void Port_Set2PinsDirection
+(
+    Port_PinType Pin1,
+    Port_PinType Pin2,
+    Port_PinDirectionType Direction
+)
+{
+#if (STD_ON == PORT_DEV_ERROR_DETECT)
+    /* Variable used to store current error status */
+    Std_ReturnType ErrStatus = (Std_ReturnType)E_OK;
 
+    /* Check if Port module is initialized */
+    if (NULL_PTR == Port_pConfigPtr)
+    {
+        (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_SET2PINSDIRECTION_ID, (uint8)PORT_E_UNINIT);
+    }
+    /* Check port pin validity */
+    else if ((Pin1 >= (Port_PinType)Port_pConfigPtr->u16NumPins) || (Pin2 >= (Port_PinType)Port_pConfigPtr->u16NumPins))
+    {
+        (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_SET2PINSDIRECTION_ID, (uint8)PORT_E_PARAM_PIN);
+    }
+    else
+#endif /* PORT_DEV_ERROR_DETECT */
+    {
+#if (STD_ON == PORT_DEV_ERROR_DETECT)
+        ErrStatus = Port_Ipw_Set2PinsDirection(Pin1, Pin2, (Port_PinDirectionType)Direction, Port_pConfigPtr);
+#else
+        (void)Port_Ipw_Set2PinsDirection(Pin1, Pin2, (Port_PinDirectionType)Direction, Port_pConfigPtr);
+#endif
+
+#if (STD_ON == PORT_DEV_ERROR_DETECT)
+        if ((Std_ReturnType)E_NOT_OK == ErrStatus)
+        {
+            (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_SET2PINSDIRECTION_ID, (uint8)PORT_E_DIRECTION_UNCHANGEABLE);
+        }
+#endif /* (STD_ON == PORT_DEV_ERROR_DETECT) */
+    }
+}
+#endif /*(STD_ON == PORT_SET_2_PINS_DIRECTION_API) */
+#endif
 
 #if (STD_ON == PORT_SET_PIN_MODE_API)
 /**
@@ -275,39 +321,30 @@ void Port_SetPinMode
     Port_PinModeType Mode
 )
 {
-    uint32 PinIndex_u32;
-    PORT_Type* PortBase_ptr;
-
 #if (STD_ON == PORT_DEV_ERROR_DETECT)
+    uint8 u8PinModeError = (uint8)0U;
+
     /* Check if port is initialized */
     if (NULL_PTR == Port_pConfigPtr)
     {
         (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_SETPINMODE_ID, (uint8)PORT_E_UNINIT);
     }
-    /* Check if pin is valid */
-    else if (Pin >= Port_pConfigPtr->NumPins_u16)
-    {
-        (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_SETPINMODE_ID, (uint8)PORT_E_PARAM_PIN);
-    }
-    /* Check if mode is changeable */
-    else if ((boolean)FALSE == Port_pConfigPtr->UsedPadConfig_ptr[Pin].ModeChangeable_bool)
-    {
-        (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_SETPINMODE_ID, (uint8)PORT_E_MODE_UNCHANGEABLE);
-    }
-    /* Check if mode is valid (0-7) */
-    else if (Mode > (Port_PinModeType)7U)
-    {
-        (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_SETPINMODE_ID, (uint8)PORT_E_PARAM_INVALID_MODE);
-    }
     else
 #endif /* (STD_ON == PORT_DEV_ERROR_DETECT) */
     {
-        /* Get PORT base address and pin index */
-        PortBase_ptr = Port_pConfigPtr->IpConfig_ptr[Pin].PortBase_ptr;
-        PinIndex_u32 = Port_pConfigPtr->IpConfig_ptr[Pin].PinPortIndex_u32;
+        /* Sets the port pin direction */
+#if (STD_ON == PORT_DEV_ERROR_DETECT)
+        u8PinModeError = (uint8)Port_Ipw_SetPinMode(Pin, Mode, Port_pConfigPtr);
+#else
+        (void)Port_Ipw_SetPinMode(Pin, Mode, Port_pConfigPtr);
+#endif
 
-        /* Set pin mode using Hardware driver */
-        PortHw_SetMuxModeSel(PortBase_ptr, PinIndex_u32, (PortHw_MuxType)Mode);
+#if (STD_ON == PORT_DEV_ERROR_DETECT)
+        if (PORT_E_PARAM_INVALID_MODE == u8PinModeError)
+        {
+            (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_SETPINMODE_ID, (uint8)PORT_E_PARAM_INVALID_MODE);
+        }
+#endif /* (STD_ON == PORT_DEV_ERROR_DETECT) */
     }
 }
 #endif /* (STD_ON == PORT_SET_PIN_MODE_API) */
@@ -323,44 +360,23 @@ void Port_SetPinMode
 */
 void Port_RefreshPortDirection( void )
 {
-    uint16 PinIndex_u16;
-    uint32 PinPortIndex_u32;
-    GPIO_Type* GpioBase_ptr;
-    PortHw_DirectionType HwDirection_en;
-
 #if (STD_ON == PORT_DEV_ERROR_DETECT)
+    uint8 CoreId;
+
+    CoreId = (uint8)Port_GetCoreID();
     /* Check if Port module is initialized */
     if (NULL_PTR == Port_pConfigPtr)
     {
         (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_REFRESHPINDIRECTION_ID, (uint8)PORT_E_UNINIT);
     }
+    else if ((uint32)1 != Port_pConfigPtr->pau8Port_PartitionList[CoreId])
+    {
+        (void)Det_ReportError((uint16)PORT_MODULE_ID, PORT_INSTANCE_ID, (uint8)PORT_REFRESHPINDIRECTION_ID, (uint8)PORT_E_PARAM_CONFIG);
+    }
     else
 #endif /* (STD_ON == PORT_DEV_ERROR_DETECT) */
     {
-        /* Loop through all configured pins */
-        for (PinIndex_u16 = 0U; PinIndex_u16 < Port_pConfigPtr->NumPins_u16; PinIndex_u16++)
-        {
-            /* Only refresh pins that are NOT direction changeable */
-            if ((boolean)FALSE == Port_pConfigPtr->UsedPadConfig_ptr[PinIndex_u16].DirectionChangeable_bool)
-            {
-                /* Get GPIO base address and pin index */
-                GpioBase_ptr = Port_pConfigPtr->IpConfig_ptr[PinIndex_u16].GpioBase_ptr;
-                PinPortIndex_u32 = Port_pConfigPtr->IpConfig_ptr[PinIndex_u16].PinPortIndex_u32;
-
-                /* Convert AUTOSAR direction to HW direction */
-                if (PORT_PIN_OUT == Port_pConfigPtr->UsedPadConfig_ptr[PinIndex_u16].PinDirection_en)
-                {
-                    HwDirection_en = PORT_HW_PIN_OUT;
-                }
-                else
-                {
-                    HwDirection_en = PORT_HW_PIN_IN;
-                }
-
-                /* Refresh pin direction using Hardware driver */
-                PortHw_SetPinDirection(GpioBase_ptr, PinPortIndex_u32, HwDirection_en);
-            }
-        }
+        Port_Ipw_RefreshPortDirection(Port_pConfigPtr);
     }
 }
 
@@ -415,49 +431,16 @@ void Port_SetAsUnusedPin
     Port_PinType Pin
 )
 {
-    uint32 PinPortIndex_u32;
-    PORT_Type* PortBase_ptr;
-    GPIO_Type* GpioBase_ptr;
-    PortHw_DirectionType HwDirection_en;
-
 #if (STD_ON == PORT_DEV_ERROR_DETECT)
     /* Check if port is initialized */
     if (NULL_PTR == Port_pConfigPtr)
     {
         (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_SETASUNUSEDPIN_ID, (uint8)PORT_E_UNINIT);
     }
-    /* Check if pin is valid */
-    else if (Pin >= Port_pConfigPtr->NumPins_u16)
-    {
-        (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_SETASUNUSEDPIN_ID, (uint8)PORT_E_PARAM_PIN);
-    }
     else
 #endif
     {
-        /* Get base addresses and pin index */
-        PortBase_ptr = Port_pConfigPtr->IpConfig_ptr[Pin].PortBase_ptr;
-        GpioBase_ptr = Port_pConfigPtr->IpConfig_ptr[Pin].GpioBase_ptr;
-        PinPortIndex_u32 = Port_pConfigPtr->IpConfig_ptr[Pin].PinPortIndex_u32;
-
-        /* Configure pin with unused pin settings */
-        if (Port_pConfigPtr->UnusedPadConfig_ptr != NULL_PTR)
-        {
-            /* Set mux mode from unused pin configuration */
-            PortHw_SetMuxModeSel(PortBase_ptr, PinPortIndex_u32, PORT_HW_MUX_AS_GPIO);
-
-            /* Convert and set direction */
-            if (PORT_PIN_OUT == Port_pConfigPtr->UnusedPadConfig_ptr->PinDirection_en)
-            {
-                HwDirection_en = PORT_HW_PIN_OUT;
-                /* Set output value */
-                PortHw_WritePin(GpioBase_ptr, PinPortIndex_u32, Port_pConfigPtr->UnusedPadConfig_ptr->PinOutputValue_u8);
-            }
-            else
-            {
-                HwDirection_en = PORT_HW_PIN_IN;
-            }
-            PortHw_SetPinDirection(GpioBase_ptr, PinPortIndex_u32, HwDirection_en);
-        }
+        Port_Ipw_SetAsUnusedPin(Pin, Port_pConfigPtr);
     }
 }
 
@@ -480,16 +463,10 @@ void Port_SetAsUsedPin
     {
         (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_SETASUSEDPIN_ID, (uint8)PORT_E_UNINIT);
     }
-    /* Check if pin is valid */
-    else if (Pin >= Port_pConfigPtr->NumPins_u16)
-    {
-        (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_SETASUSEDPIN_ID, (uint8)PORT_E_PARAM_PIN);
-    }
     else
 #endif
     {
-        /* Re-initialize pin with original configuration */
-        (void)PortHw_Init(1U, &Port_pConfigPtr->IpConfig_ptr[Pin]);
+        Port_Ipw_SetAsUsedPin(Pin, Port_pConfigPtr);
     }
 }
 #endif /* (STD_ON == PORT_SET_AS_UNUSED_PIN_API) */
@@ -509,38 +486,16 @@ void Port_ResetPinMode
     Port_PinType Pin
 )
 {
-    uint32 PinPortIndex_u32;
-    PORT_Type* PortBase_ptr;
-    PortHw_MuxType OriginalMux_en;
-
 #if (STD_ON == PORT_DEV_ERROR_DETECT)
     /* Check if port is initialized */
     if (NULL_PTR == Port_pConfigPtr)
     {
         (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_RESETPINMODE_ID, (uint8)PORT_E_UNINIT);
     }
-    /* Check if pin is valid */
-    else if (Pin >= Port_pConfigPtr->NumPins_u16)
-    {
-        (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_RESETPINMODE_ID, (uint8)PORT_E_PARAM_PIN);
-    }
-    /* Check if mode is changeable */
-    else if ((boolean)FALSE == Port_pConfigPtr->UsedPadConfig_ptr[Pin].ModeChangeable_bool)
-    {
-        (void)Det_ReportError((uint16)PORT_MODULE_ID, (uint8)PORT_INSTANCE_ID, (uint8)PORT_RESETPINMODE_ID, (uint8)PORT_E_MODE_UNCHANGEABLE);
-    }
     else
 #endif
     {
-        /* Get PORT base address and pin index */
-        PortBase_ptr = Port_pConfigPtr->IpConfig_ptr[Pin].PortBase_ptr;
-        PinPortIndex_u32 = Port_pConfigPtr->IpConfig_ptr[Pin].PinPortIndex_u32;
-
-        /* Get original mux mode from configuration */
-        OriginalMux_en = Port_pConfigPtr->IpConfig_ptr[Pin].Mux_en;
-
-        /* Reset pin mode to original value using Hardware driver */
-        PortHw_SetMuxModeSel(PortBase_ptr, PinPortIndex_u32, OriginalMux_en);
+        Port_Ipw_ResetPinMode(Pin, Port_pConfigPtr);
     }
 }
 #endif /* (STD_ON == PORT_RESET_PIN_MODE_API) */
