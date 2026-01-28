@@ -37,7 +37,8 @@ extern "C" {
 * 3) internal and external interfaces from this unit
 ==================================================================================================*/
 #include "Port_Hw_Types.h"
-#include "devassert.h"
+#include "Port_Hw_Cfg.h"
+#include "my_devassert.h"
 
 /*==================================================================================================
 *                              SOURCE FILE VERSION INFORMATION
@@ -119,12 +120,12 @@ extern "C" {
 /**
 * @brief Array of PORT base addresses for all port instances
 */
-extern PORT_Type* const Port_Hw_g_PortBaseAddr_ptr[PORT_HW_PORT_COUNT_U8];
+extern PORT_Type* const PortHw_g_PortBaseAddr_ptr[PORT_HW_PORT_COUNT_U8];
 
 /**
 * @brief Array of GPIO base addresses for all port instances
 */
-extern GPIO_Type* const Port_Hw_g_GpioBaseAddr_ptr[PORT_HW_PORT_COUNT_U8];
+extern GPIO_Type* const PortHw_g_GpioBaseAddr_ptr[PORT_HW_PORT_COUNT_U8];
 
 /*==================================================================================================
 *                                     FUNCTION PROTOTYPES
@@ -133,12 +134,15 @@ extern GPIO_Type* const Port_Hw_g_GpioBaseAddr_ptr[PORT_HW_PORT_COUNT_U8];
 * @brief       Initializes multiple pins with the given configuration array
 *
 * @details     This function configures multiple pins using the provided configuration
-*              structure array. Each element configures one pin.
+*              structure array. Each element configures one pin. Also initializes unused pins.
 *
-* @param[in]   PinCount_u32  Number of pins to configure
-* @param[in]   Config_pst    Pointer to array of pin configuration structures
+* @param[in]   PinCount_u32       Number of pins to configure
+* @param[in]   Config_ptr         Pointer to array of pin configuration structures
+* @param[in]   NumUnusedPins_u16  Number of unused pins to configure
+* @param[in]   UnusedPads_ptr     Pointer to array of unused pad indices
+* @param[in]   UnusedPadConfig_ptr Pointer to unused pad configuration
 *
-* @return      Port_Hw_StatusType
+* @return      PortHw_StatusType
 * @retval      PORT_HW_STATUS_SUCCESS  All pins configured successfully
 * @retval      PORT_HW_STATUS_ERROR    Configuration failed
 *
@@ -147,11 +151,14 @@ extern GPIO_Type* const Port_Hw_g_GpioBaseAddr_ptr[PORT_HW_PORT_COUNT_U8];
 * @pre         None
 * @post        Pins are configured according to the provided configuration
 *
-* @implements  Port_Hw_Init_Activity
+* @implements  PortHw_Init_Activity
 */
-Port_Hw_StatusType Port_Hw_Init(
+void PortHw_Init(
     uint32 PinCount_u32,
-    const Port_Hw_PinSettingsConfigType Config_pst[]
+    const PortHw_PinSettingsConfigType Config_ptr[],
+    uint16 NumUnusedPins_u16,
+    const uint16* UnusedPads_ptr,
+    const PortHw_UnusedPinConfigType* UnusedPadConfig_ptr
 );
 
 /**
@@ -173,10 +180,10 @@ Port_Hw_StatusType Port_Hw_Init(
 *
 * @implements  Port_Hw_SetMuxModeSel_Activity
 */
-void Port_Hw_SetMuxModeSel(
+void PortHw_SetMuxModeSel(
     PORT_Type* const Base_ptr,
     uint32 Pin_u32,
-    Port_Hw_MuxType Mux_en
+    PortHw_MuxType Mux_en
 );
 
 /**
@@ -197,72 +204,12 @@ void Port_Hw_SetMuxModeSel(
 *
 * @implements  Port_Hw_SetPinDirection_Activity
 */
-void Port_Hw_SetPinDirection(
+void PortHw_SetPinDirection(
     GPIO_Type* const Base_ptr,
     uint32 Pin_u32,
-    Port_Hw_DirectionType Direction_en
+    PortHw_DirectionType Direction_en
 );
 
-/**
-* @brief       Enables digital filter for a specific pin
-*
-* @details     This function enables the digital filter feature for the specified pin.
-*
-* @param[in]   Base_ptr  Pointer to PORT peripheral base address
-* @param[in]   Pin_u32   Pin number within the port (0-31)
-*
-* @return      void
-*
-* @api
-*
-* @implements  Port_Hw_EnableDigitalFilter_Activity
-*/
-void Port_Hw_EnableDigitalFilter(
-    PORT_Type* const Base_ptr,
-    uint32 Pin_u32
-);
-
-/**
-* @brief       Disables digital filter for a specific pin
-*
-* @details     This function disables the digital filter feature for the specified pin.
-*
-* @param[in]   Base_ptr  Pointer to PORT peripheral base address
-* @param[in]   Pin_u32   Pin number within the port (0-31)
-*
-* @return      void
-*
-* @api
-*
-* @implements  Port_Hw_DisableDigitalFilter_Activity
-*/
-void Port_Hw_DisableDigitalFilter(
-    PORT_Type* const Base_ptr,
-    uint32 Pin_u32
-);
-
-/**
-* @brief       Configures digital filter with given parameters
-*
-* @details     This function configures the digital filter clock source and width.
-*              Note: All digital filters must be disabled before calling this function.
-*
-* @param[in]   Base_ptr    Pointer to PORT peripheral base address
-* @param[in]   Config_pst  Pointer to digital filter configuration structure
-*
-* @return      void
-*
-* @api
-*
-* @pre         All digital filters must be disabled
-* @post        Digital filter configuration is updated
-*
-* @implements  Port_Hw_ConfigDigitalFilter_Activity
-*/
-void Port_Hw_ConfigDigitalFilter(
-    PORT_Type* const Base_ptr,
-    const Port_Hw_DigitalFilterConfigType* Config_pst
-);
 
 /**
 * @brief       Quickly configures multiple pins with the same configuration
@@ -282,11 +229,11 @@ void Port_Hw_ConfigDigitalFilter(
 *
 * @implements  Port_Hw_SetGlobalPinControl_Activity
 */
-void Port_Hw_SetGlobalPinControl(
+void PortHw_SetGlobalPinControl(
     PORT_Type* const Base_ptr,
     uint16 Pins_u16,
     uint16 Value_u16,
-    Port_Hw_GlobalControlPinsType HalfPort_en
+    PortHw_GlobalControlPinsType GlobalCtrlPins_en
 );
 
 /**
@@ -306,7 +253,7 @@ void Port_Hw_SetGlobalPinControl(
 *
 * @implements  Port_Hw_WritePin_Activity
 */
-void Port_Hw_WritePin(
+void PortHw_WritePin(
     GPIO_Type* const Base_ptr,
     uint32 Pin_u32,
     uint8 Value_u8
@@ -328,7 +275,7 @@ void Port_Hw_WritePin(
 *
 * @implements  Port_Hw_ReadPin_Activity
 */
-uint8 Port_Hw_ReadPin(
+uint8 PortHw_ReadPin(
     const GPIO_Type* const Base_ptr,
     uint32 Pin_u32
 );
@@ -349,7 +296,7 @@ uint8 Port_Hw_ReadPin(
 *
 * @implements  Port_Hw_TogglePin_Activity
 */
-void Port_Hw_TogglePin(
+void PortHw_TogglePin(
     GPIO_Type* const Base_ptr,
     uint32 Pin_u32
 );

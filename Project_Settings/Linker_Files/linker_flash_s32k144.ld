@@ -1,279 +1,230 @@
+/*==================================================================================================
+*   Project              : RTD AUTOSAR 4.4
+*   Platform             : CORTEXM
+*   Peripheral           : 
+*   Dependencies         : none
+*
+*   Autosar Version      : 4.4.0
+*   Autosar Revision     : ASR_REL_4_4_REV_0000
+*   Autosar Conf.Variant :
+*   SW Version           : 1.0.1
+*   Build Version        : S32K1_RTD_1_0_1_D2202_ASR_REL_4_4_REV_0000_20220224
+*
+*   (c) Copyright 2020-2022 NXP Semiconductors
+*   All Rights Reserved.
+*
+*   NXP Confidential. This software is owned or controlled by NXP and may only be
+*   used strictly in accordance with the applicable license terms. By expressly
+*   accepting such terms or by downloading, installing, activating and/or otherwise
+*   using the software, you are agreeing that you have read, and that you agree to
+*   comply with and are bound by, such license terms. If you do not agree to be
+*   bound by the applicable license terms, then you may not retain, install,
+*   activate or otherwise use the software.
+==================================================================================================*/
 /*
-** ###################################################################
-**     Processor:           S32K144 with 64 KB SRAM
-**     Compiler:            GNU C Compiler
-**
-**     Abstract:
-**         Linker file for the GNU C Compiler
-**
-**     Copyright (c) 2015-2016 Freescale Semiconductor, Inc.
-**     Copyright 2017-2021 NXP
-**     All rights reserved.
-**
-**     THIS SOFTWARE IS PROVIDED BY NXP "AS IS" AND ANY EXPRESSED OR
-**     IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-**     OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-**     IN NO EVENT SHALL NXP OR ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-**     INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-**     (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-**     SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-**     HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
-**     STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
-**     IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
-**     THE POSSIBILITY OF SUCH DAMAGE.
-**
-**     http:                 www.nxp.com
-**
-** ###################################################################
+* GCC Linker Command File:
+* 0x00000000    0x0007FFFF  512KB   Flash
+* 0x1FFF8000    0x1FFFFFFF  32768  SRAM_L
+* 0x20000000    0x20006FFF  28672  SRAM_U
 */
 
-/* Entry Point */
-ENTRY(Reset_Handler)
-/*
-To use "new" operator with EWL in C++ project the following symbol shall be defined
-*/
-/*EXTERN(_ZN10__cxxabiv119__terminate_handlerE)*/
 
-
-HEAP_SIZE  = DEFINED(__heap_size__)  ? __heap_size__  : 0x00000400;
-STACK_SIZE = DEFINED(__stack_size__) ? __stack_size__ : 0x00000400;
-
-/* If symbol __flash_vector_table__=1 is defined at link time
- * the interrupt vector will not be copied to RAM.
- * Warning: Using the interrupt vector from Flash will not allow
- * INT_SYS_InstallHandler because the section is Read Only.
- */
-M_VECTOR_RAM_SIZE = DEFINED(__flash_vector_table__) ? 0x0 : 0x0400;
-
-/* Specify the memory areas */
 MEMORY
-{
-  /* Flash */
-  m_interrupts          (RX)  : ORIGIN = 0x00000000, LENGTH = 0x00000400
-  m_flash_config        (RX)  : ORIGIN = 0x00000400, LENGTH = 0x00000010
-  m_text                (RX)  : ORIGIN = 0x00000410, LENGTH = 0x0007FBF0
-
-  /* SRAM_L */
-  m_data                (RW)  : ORIGIN = 0x1FFF8000, LENGTH = 0x00008000
-
-  /* SRAM_U */
-  m_data_2              (RW)  : ORIGIN = 0x20000000, LENGTH = 0x00007000
+{         
+    int_flash_interrupts    : ORIGIN = 0x00000000, LENGTH = 0x00000400    /* 1K */    /* Do not change this section */
+    int_flash_config        : ORIGIN = 0x00000400, LENGTH = 0x00000010    /* 16bytes */ /* Do not change this section */
+    int_flash               : ORIGIN = 0x00000410, LENGTH = 0x0007FBF0    /* ~511KB */ 
+    int_sram_results        : ORIGIN = 0x1FFF8000, LENGTH = 0x00000100    /* 256bytes */
+    int_sram                : ORIGIN = 0x1FFF8100, LENGTH = 0x0000DF00    /* ~56K */
+    int_sram_stack_c0       : ORIGIN = 0x20006000, LENGTH = 0x00001000    /* 4K  */
+    ram_rsvd2               : ORIGIN = 0x20007000, LENGTH = 0             /* End of SRAM */
 }
 
-/* Define output sections */
+
+HEAP_SIZE  = DEFINED(__heap_size__)  ? __heap_size__  : 0x00000200;
+
+ENTRY(Reset_Handler)
+
 SECTIONS
 {
-  /* The startup code goes first into internal flash */
-  .interrupts :
-  {
-    __VECTOR_TABLE = .;
-    __interrupts_start__ = .;
+    
+	.flash_interrupts :
+	{
+		. = ALIGN(4096);
+        __interrupts_rom_start = .;
+        KEEP(*(.intc_vector))    
+        . = ALIGN(4);
+        __interrupts_rom_end = .;
+	} > int_flash_interrupts
+	
+	.flash_config :
+	{
+		KEEP(*(.flash_config))
+	} > int_flash_config
+	
+	.flash :
+	{
+        . = ALIGN(4);
+        *(.startup) 
+        . = ALIGN(4);
+        *(.systeminit) 
+        . = ALIGN(4);
+        *(.text.startup) 
+        . = ALIGN(4);
+        *(.text)
+        *(.text*) 
+        . = ALIGN(4);
+        *(.mcal_text) 
+        . = ALIGN(4);
+        acfls_code_rom_start = .;
+        . = ALIGN(0x4);
+        *(.acfls_code_rom)
+        acfls_code_rom_end = .;
+        KEEP(*(.init))
+        . = ALIGN(4);
+        KEEP(*(.fini)) 
+         
+        . = ALIGN(4);
+        *(.rodata)  
+        *(.rodata*)  
+        . = ALIGN(4);
+        *(.mcal_const_cfg)  
+        . = ALIGN(4);
+        *(.mcal_const)
+        . = ALIGN(4);
+        *(.mcal_const_no_cacheable)		
+        . = ALIGN(4);
+        __init_table = .;
+        KEEP(*(.init_table))  
+        . = ALIGN(4);
+        __zero_table = .;
+        KEEP(*(.zero_table))
+
+        . = ALIGN(4);
+        *(.acmcu_code_rom) 	
+		. = ALIGN(4);
+		_etext = .;
+		__DATA_ROM = .;
+	} > int_flash
+	
     . = ALIGN(4);
-    KEEP(*(.isr_vector))     /* Startup code */
-    __interrupts_end__ = .;
+    PROVIDE(__exidx_start = .);
+    .ARM.exidx :
+    {
+        *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+    }> int_sram
     . = ALIGN(4);
-  } > m_interrupts
+    PROVIDE(__exidx_end = .);
+    
+    .ARM.extab :
+    {
+        *(.ARM.extab*)
+        . = ALIGN(4);
+    } > int_sram    
+    
+	.sram_interrupts :
+    {
+		. = ALIGN(4096);
+		__interrupts_ram_start = .;
+		. += (__interrupts_rom_end - __interrupts_rom_start);
+		. = ALIGN(4);
+		__interrupts_ram_end = .;
+	} > int_sram
+       
+    .sram_data :  AT(__DATA_ROM)
+    {
+        . = ALIGN(4);
+		__data_ram_start = .;
+        *(.ramcode)    
+        . = ALIGN(4);
+        *(.data)  
+        *(.data*)
+        . = ALIGN(4);
+        *(.mcal_data)  
+		. = ALIGN(4);
+        *(.mcal_data_no_cacheable)     
+		. = ALIGN(4);
+		__data_ram_end = .;
+	} > int_sram
+	
+	__DATA_ROM_END = __DATA_ROM + (__data_ram_end - __data_ram_start);
+	
+	.sram_bss (NOLOAD) :
+	{
+        . = ALIGN(16);
+        __sram_bss_start = .;
+        *(.bss)
+        *(.bss*)
+        . = ALIGN(16);
+        *(.mcal_bss)
+		. = ALIGN(16);
+        __non_cacheable_bss_start = .;
+        *(.mcal_bss_no_cacheable)      
+        . = ALIGN(4);
+        __non_cacheable_bss_end = .;   
+        __sram_bss_end = .;
+    } > int_sram
 
-  .flash_config :
-  {
-    . = ALIGN(4);
-    KEEP(*(.FlashConfig))    /* Flash Configuration Field (FCF) */
-    . = ALIGN(4);
-  } > m_flash_config
+    
+    .acfls_code_ram :
+    {
+        . += (acfls_code_rom_end - acfls_code_rom_start );
+    } > int_sram
+	
+    /* heap section */
+    .heap (NOLOAD):
+    {
+    	.  = ALIGN(4);
+	    _end = .;
+	    end = .;
+        _heap_start = .;
+        . += HEAP_SIZE;
+        _heap_end = .;
+    } > int_sram
+    
 
-  /* The program code and other data goes into internal flash */
-  .text :
-  {
-    . = ALIGN(4);
-    *(.text)                 /* .text sections (code) */
-    *(.text*)                /* .text* sections (code) */
-    *(.rodata)               /* .rodata sections (constants, strings, etc.) */
-    *(.rodata*)              /* .rodata* sections (constants, strings, etc.) */
-    *(.glue_7)               /* glue arm to thumb code */
-    *(.glue_7t)              /* glue thumb to arm code */
-    *(.eh_frame)
-    KEEP (*(.init))
-    KEEP (*(.fini))
-    . = ALIGN(4);
-  } > m_text
+	int_results (NOLOAD):
+	{
+		. = ALIGN(4);
+        KEEP(*(.int_results))  
+        . += 0x100;
+	} > int_sram_results
 
-  .ARM.extab :
-  {
-    *(.ARM.extab* .gnu.linkonce.armextab.*)
-  } > m_text
+    __Stack_end_c0           = ORIGIN(int_sram_stack_c0);
+    __Stack_start_c0         = ORIGIN(int_sram_stack_c0) + LENGTH(int_sram_stack_c0);
 
-  .ARM :
-  {
-    __exidx_start = .;
-    *(.ARM.exidx*)
-    __exidx_end = .;
-  } > m_text
+    __INT_SRAM_START         = ORIGIN(int_sram_results);
+    __INT_SRAM_END           = ORIGIN(ram_rsvd2);
+    
+    __RAM_INIT_START    = __data_ram_start;
+    __RAM_INIT_END      = __data_ram_end;
+    __ROM_INIT_START    = __DATA_ROM;
+    __ROM_INIT_END      = __DATA_ROM_END;
+    
+    __BSS_SRAM_START         = __sram_bss_start;
+    __BSS_SRAM_END           = __sram_bss_end;
+    __BSS_SRAM_SIZE          = __sram_bss_end - __sram_bss_start;
 
- .ctors :
-  {
-    __CTOR_LIST__ = .;
-    /* gcc uses crtbegin.o to find the start of
-       the constructors, so we make sure it is
-       first.  Because this is a wildcard, it
-       doesn't matter if the user does not
-       actually link against crtbegin.o; the
-       linker won't look for a file to match a
-       wildcard.  The wildcard also means that it
-       doesn't matter which directory crtbegin.o
-       is in.  */
-    KEEP (*crtbegin.o(.ctors))
-    KEEP (*crtbegin?.o(.ctors))
-    /* We don't want to include the .ctor section from
-       from the crtend.o file until after the sorted ctors.
-       The .ctor section from the crtend file contains the
-       end of ctors marker and it must be last */
-    KEEP (*(EXCLUDE_FILE(*crtend?.o *crtend.o) .ctors))
-    KEEP (*(SORT(.ctors.*)))
-    KEEP (*(.ctors))
-    __CTOR_END__ = .;
-  } > m_text
+    __RAM_INTERRUPT_START    = __interrupts_ram_start;
+    __ROM_INTERRUPT_START    = __interrupts_rom_start;
+    __ROM_INTERRUPT_END      = __interrupts_rom_end;
 
-  .dtors :
-  {
-    __DTOR_LIST__ = .;
-    KEEP (*crtbegin.o(.dtors))
-    KEEP (*crtbegin?.o(.dtors))
-    KEEP (*(EXCLUDE_FILE(*crtend?.o *crtend.o) .dtors))
-    KEEP (*(SORT(.dtors.*)))
-    KEEP (*(.dtors))
-    __DTOR_END__ = .;
-  } > m_text
+    __INIT_TABLE             = __init_table;
+    __ZERO_TABLE             = __zero_table;
+    
+    __RAM_INIT               = 1;
+	
+    /* Fls module access code support */    
+    Fls_ACEraseRomStart         = acfls_code_rom_start;
+    Fls_ACEraseRomEnd           = acfls_code_rom_end;
+    Fls_ACEraseSize             = acfls_code_rom_end - acfls_code_rom_start;
 
-  .preinit_array :
-  {
-    PROVIDE_HIDDEN (__preinit_array_start = .);
-    KEEP (*(.preinit_array*))
-    PROVIDE_HIDDEN (__preinit_array_end = .);
-  } > m_text
-
-  .init_array :
-  {
-    PROVIDE_HIDDEN (__init_array_start = .);
-    KEEP (*(SORT(.init_array.*)))
-    KEEP (*(.init_array*))
-    PROVIDE_HIDDEN (__init_array_end = .);
-  } > m_text
-
-  .fini_array :
-  {
-    PROVIDE_HIDDEN (__fini_array_start = .);
-    KEEP (*(SORT(.fini_array.*)))
-    KEEP (*(.fini_array*))
-    PROVIDE_HIDDEN (__fini_array_end = .);
-  } > m_text
-
-  __etext = .;    /* Define a global symbol at end of code. */
-  __DATA_ROM = .; /* Symbol is used by startup for data initialization. */
-  .interrupts_ram :
-  {
-    . = ALIGN(4);
-    __VECTOR_RAM__ = .;
-    __RAM_START = .;
-    __interrupts_ram_start__ = .; /* Create a global symbol at data start. */
-    *(.m_interrupts_ram)          /* This is a user defined section. */
-    . += M_VECTOR_RAM_SIZE;
-    . = ALIGN(4);
-    __interrupts_ram_end__ = .;   /* Define a global symbol at data end. */
-  } > m_data
-
-  __VECTOR_RAM = DEFINED(__flash_vector_table__) ? ORIGIN(m_interrupts) : __VECTOR_RAM__ ;
-  __RAM_VECTOR_TABLE_SIZE = DEFINED(__flash_vector_table__) ? 0x0 : (__interrupts_ram_end__ - __interrupts_ram_start__) ;
-
-  .data : AT(__DATA_ROM)
-  {
-    . = ALIGN(4);
-    __DATA_RAM = .;
-    __data_start__ = .;      /* Create a global symbol at data start. */
-    *(.data)                 /* .data sections */
-    *(.data*)                /* .data* sections */
-    KEEP(*(.jcr*))
-    . = ALIGN(4);
-    __data_end__ = .;        /* Define a global symbol at data end. */
-  } > m_data
-
-  __DATA_END = __DATA_ROM + (__data_end__ - __data_start__);
-  __CODE_ROM = __DATA_END; /* Symbol is used by code initialization. */
-  .code : AT(__CODE_ROM)
-  {
-    . = ALIGN(4);
-    __CODE_RAM = .;
-    __code_start__ = .;      /* Create a global symbol at code start. */
-    __code_ram_start__ = .;
-    *(.code_ram)             /* Custom section for storing code in RAM */
-    . = ALIGN(4);
-    __code_end__ = .;        /* Define a global symbol at code end. */
-    __code_ram_end__ = .;
-  } > m_data
-
-  __CODE_END = __CODE_ROM + (__code_end__ - __code_start__);
-  __CUSTOM_ROM = __CODE_END;
-
-  /* Custom Section Block that can be used to place data at absolute address. */
-  /* Use __attribute__((section (".customSection"))) to place data here. */
-  .customSectionBlock  ORIGIN(m_data_2) : AT(__CUSTOM_ROM)
-  {
-    __customSection_start__ = .;
-    KEEP(*(.customSection))  /* Keep section even if not referenced. */
-    __customSection_end__ = .;
-  } > m_data_2
-  __CUSTOM_END = __CUSTOM_ROM + (__customSection_end__ - __customSection_start__);
-
-  /* Uninitialized data section. */
-  .bss :
-  {
-    /* This is used by the startup in order to initialize the .bss section. */
-    . = ALIGN(4);
-    __BSS_START = .;
-    __bss_start__ = .;
-    *(.bss)
-    *(.bss*)
-    *(COMMON)
-    . = ALIGN(4);
-    __bss_end__ = .;
-    __BSS_END = .;
-  } > m_data_2
-
-  .heap :
-  {
-    . = ALIGN(8);
-    __end__ = .;
-    __heap_start__ = .;
-    PROVIDE(end = .);
-    PROVIDE(_end = .);
-    PROVIDE(__end = .);
-    __HeapBase = .;
-    . += HEAP_SIZE;
-    __HeapLimit = .;
-    __heap_limit = .;
-    __heap_end__ = .;
-  } > m_data_2
-
-  /* Initializes stack on the end of block */
-  __StackTop   = ORIGIN(m_data_2) + LENGTH(m_data_2);
-  __StackLimit = __StackTop - STACK_SIZE;
-  PROVIDE(__stack = __StackTop);
-  __RAM_END = __StackTop;
-
-  .stack __StackLimit :
-  {
-    . = ALIGN(8);
-    __stack_start__ = .;
-    . += STACK_SIZE;
-    __stack_end__ = .;
-  } > m_data_2
-
-  /* Labels required by EWL */
-  __START_BSS = __BSS_START;
-  __END_BSS = __BSS_END;
-  __SP_INIT = __StackTop;  
-  
-  .ARM.attributes 0 : { *(.ARM.attributes) }
-
-  ASSERT(__StackLimit >= __HeapLimit, "region m_data_2 overflowed with stack and heap")
+    Fls_ACWriteRomStart         = acfls_code_rom_start;
+    Fls_ACWriteRomEnd           = acfls_code_rom_end;
+    Fls_ACWriteSize             = acfls_code_rom_end - acfls_code_rom_start;
+    
+    _ERASE_FUNC_ADDRESS_        = ADDR(.acfls_code_ram);
+    _WRITE_FUNC_ADDRESS_        = ADDR(.acfls_code_ram);
+	
+    __ENTRY_VTABLE              = __RAM_INTERRUPT_START;
 }
-
