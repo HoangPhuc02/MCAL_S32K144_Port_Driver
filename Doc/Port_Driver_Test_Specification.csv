@@ -1,0 +1,375 @@
+Count;Category;Spec Number;Tested functionality;Test description;Expected;CDF;Operation;System;Script PCAN;Test Program;Script Debugger;Identifier;Requirement ID;Design ID;Test Type;Remarks
+1;DRV;PORT_IT_DRV_001;"[Tested functionality]
+To check if Port_Init API Development error reports when input parameter is incorrect (NULL_PTR in post-build configuration).
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PORT_PRECOMPILE_SUPPORT is STD_OFF";1. Invoke Port_Init API with a NULL pointer was given as config parameter.;1. After step 1, Port_Init should report error PORT_E_INIT_FAILED (0x0C) to DET with service Id is 0x00.;PORT_IT_DRV_001.xdm;Auto;Abnormal;;PORT_IT_DRV_001.c;sram_test.mac;+ATF_PASSED;SRS_Port_12077, SRS_BSW_00323;SAD_PORT_01;TST_IT_GN, TST_IT_AC;
+2;DRV;PORT_IT_DRV_002;"[Tested functionality]
+To check if Port_Init API Development error reports when ConfigPtr is not NULL in pre-compile configuration.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PORT_PRECOMPILE_SUPPORT is STD_ON";1. Invoke Port_Init API with a non-NULL pointer.;1. After step 1, Port_Init should report error PORT_E_INIT_FAILED (0x0C) to DET with service Id is 0x00.;PORT_IT_DRV_002.xdm;Auto;Abnormal;;PORT_IT_DRV_002.c;sram_test.mac;+ATF_PASSED;SRS_Port_12077, SRS_BSW_00323;SAD_PORT_01;TST_IT_GN, TST_IT_AC;
+3;DRV;PORT_IT_DRV_003;"[Tested functionality]
+To check if Port_Init API Development error reports when IpConfig_ptr is NULL or NumPins is 0.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true";"1. Invoke Port_Init API with a configuration that has IpConfig_ptr = NULL_PTR.
+2. Invoke Port_Init API with a configuration that has NumPins_u16 = 0.";"1. After step 1, Port_Init should report error PORT_E_PARAM_CONFIG (0xF0) to DET with service Id is 0x00.
+2. After step 2, Port_Init should report error PORT_E_PARAM_CONFIG (0xF0) to DET with service Id is 0x00.";PORT_IT_DRV_003.xdm;Auto;Abnormal;;PORT_IT_DRV_003.c;sram_test.mac;+ATF_PASSED;SRS_Port_12077;SAD_PORT_01;TST_IT_GN, TST_IT_AC;
+4;DRV;PORT_IT_DRV_004;"[Tested functionality]
+To check if Port_Init API initializes all configured pins successfully.
+
+[Pre-conditions]
+1. Valid configuration with multiple pins configured";"1. Invoke Port_Init API with a valid config pointer.
+2. Read back the PCR and GPIO registers to verify pin configuration.";"1. After step 1, no error should be reported to DET.
+2. After step 2, all pins should be configured according to the provided configuration (mux, direction, pull, drive strength).";PORT_IT_DRV_004.xdm;Auto;Normal;;PORT_IT_DRV_004.c;sram_test.mac;+ATF_PASSED;SRS_Port_12001, SRS_Port_12002;SAD_PORT_01;TST_IT_GN;
+5;DRV;PORT_IT_DRV_005;"[Tested functionality]
+To check if Port_Init API initializes unused pins correctly.
+
+[Pre-conditions]
+1. Valid configuration with unused pins configured";"1. Invoke Port_Init API with a valid config pointer that includes unused pins configuration.
+2. Read back the GPIO registers for unused pins.";"1. After step 1, no error should be reported to DET.
+2. After step 2, all unused pins should be configured according to UnusedPadConfig (direction, output value, PCR settings).";PORT_IT_DRV_005.xdm;Auto;Normal;;PORT_IT_DRV_005.c;sram_test.mac;+ATF_PASSED;SRS_Port_12001;SAD_PORT_01;TST_IT_GN;
+6;DRV;PORT_IT_DRV_006;"[Tested functionality]
+To check if Port_SetPinDirection API reports the error PORT_E_UNINIT when Port is not initialized.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PortSetPinDirectionApi is true
+3. Port_Init has NOT been called";1. Invoke Port_SetPinDirection API without calling Port_Init first.;1. After step 1, Port_SetPinDirection should report error PORT_E_UNINIT (0x0F) to DET with service Id is 0x01.;PORT_IT_DRV_006.xdm;Auto;Abnormal;;PORT_IT_DRV_006.c;sram_test.mac;+ATF_PASSED;SRS_Port_12406, SRS_BSW_00406;SAD_PORT_02;TST_IT_GN, TST_IT_AC;
+7;DRV;PORT_IT_DRV_007;"[Tested functionality]
+To check if Port_SetPinDirection API reports the error PORT_E_PARAM_PIN when invalid pin ID is passed.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PortSetPinDirectionApi is true
+3. Port_Init has been called";"1. Invoke Port_Init API with a valid config pointer.
+2. Invoke Port_SetPinDirection API with Pin ID >= NumPins.";"1. After step 1, no error should be reported to DET.
+2. After step 2, Port_SetPinDirection should report error PORT_E_PARAM_PIN (0x0A) to DET with service Id is 0x01.";PORT_IT_DRV_007.xdm;Auto;Abnormal;;PORT_IT_DRV_007.c;sram_test.mac;+ATF_PASSED;SRS_Port_12406, SRS_BSW_00323;SAD_PORT_02;TST_IT_GN, TST_IT_AC;
+8;DRV;PORT_IT_DRV_008;"[Tested functionality]
+To check if Port_SetPinDirection API reports the error PORT_E_DIRECTION_UNCHANGEABLE when pin direction is not changeable.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PortSetPinDirectionApi is true
+3. Pin is configured with DirectionChangeable = FALSE";"1. Invoke Port_Init API with a valid config pointer (pin configured as direction unchangeable).
+2. Invoke Port_SetPinDirection API with that pin.";"1. After step 1, no error should be reported to DET.
+2. After step 2, Port_SetPinDirection should report error PORT_E_DIRECTION_UNCHANGEABLE (0x0B) to DET with service Id is 0x01.";PORT_IT_DRV_008.xdm;Auto;Abnormal;;PORT_IT_DRV_008.c;sram_test.mac;+ATF_PASSED;SRS_Port_12406;SAD_PORT_02;TST_IT_GN, TST_IT_AC;
+9;DRV;PORT_IT_DRV_009;"[Tested functionality]
+To check if Port_SetPinDirection API changes pin direction from INPUT to OUTPUT successfully.
+
+[Pre-conditions]
+1. PortSetPinDirectionApi is true
+2. Pin is configured with DirectionChangeable = TRUE
+3. Pin initial direction is INPUT";"1. Invoke Port_Init API with a valid config pointer.
+2. Invoke Port_SetPinDirection API with Direction = PORT_PIN_OUT.
+3. Read back GPIO PDDR register.";"1. After step 1, no error should be reported to DET.
+2. After step 2, no error should be reported to DET.
+3. After step 3, the PDDR bit for the pin should be 1 (output).";PORT_IT_DRV_009.xdm;Auto;Normal;;PORT_IT_DRV_009.c;sram_test.mac;+ATF_PASSED;SRS_Port_12405;SAD_PORT_02;TST_IT_GN;
+10;DRV;PORT_IT_DRV_010;"[Tested functionality]
+To check if Port_SetPinDirection API changes pin direction from OUTPUT to INPUT successfully.
+
+[Pre-conditions]
+1. PortSetPinDirectionApi is true
+2. Pin is configured with DirectionChangeable = TRUE
+3. Pin initial direction is OUTPUT";"1. Invoke Port_Init API with a valid config pointer.
+2. Invoke Port_SetPinDirection API with Direction = PORT_PIN_IN.
+3. Read back GPIO PDDR and PIDR registers.";"1. After step 1, no error should be reported to DET.
+2. After step 2, no error should be reported to DET.
+3. After step 3, the PDDR bit for the pin should be 0 (input) and PIDR bit should be 0 (input enabled).";PORT_IT_DRV_010.xdm;Auto;Normal;;PORT_IT_DRV_010.c;sram_test.mac;+ATF_PASSED;SRS_Port_12405;SAD_PORT_02;TST_IT_GN;
+11;DRV;PORT_IT_DRV_011;"[Tested functionality]
+To check if Port_SetPinMode API reports the error PORT_E_UNINIT when Port is not initialized.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PortSetPinModeApi is true
+3. Port_Init has NOT been called";1. Invoke Port_SetPinMode API without calling Port_Init first.;1. After step 1, Port_SetPinMode should report error PORT_E_UNINIT (0x0F) to DET with service Id is 0x04.;PORT_IT_DRV_011.xdm;Auto;Abnormal;;PORT_IT_DRV_011.c;sram_test.mac;+ATF_PASSED;SRS_Port_12125, SRS_BSW_00406;SAD_PORT_03;TST_IT_GN, TST_IT_AC;
+12;DRV;PORT_IT_DRV_012;"[Tested functionality]
+To check if Port_SetPinMode API reports the error PORT_E_PARAM_PIN when invalid pin ID is passed.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PortSetPinModeApi is true
+3. Port_Init has been called";"1. Invoke Port_Init API with a valid config pointer.
+2. Invoke Port_SetPinMode API with Pin ID >= NumPins.";"1. After step 1, no error should be reported to DET.
+2. After step 2, Port_SetPinMode should report error PORT_E_PARAM_PIN (0x0A) to DET with service Id is 0x04.";PORT_IT_DRV_012.xdm;Auto;Abnormal;;PORT_IT_DRV_012.c;sram_test.mac;+ATF_PASSED;SRS_Port_12125, SRS_BSW_00323;SAD_PORT_03;TST_IT_GN, TST_IT_AC;
+13;DRV;PORT_IT_DRV_013;"[Tested functionality]
+To check if Port_SetPinMode API reports the error PORT_E_MODE_UNCHANGEABLE when pin mode is not changeable.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PortSetPinModeApi is true
+3. Pin is configured with ModeChangeable = FALSE";"1. Invoke Port_Init API with a valid config pointer (pin configured as mode unchangeable).
+2. Invoke Port_SetPinMode API with that pin.";"1. After step 1, no error should be reported to DET.
+2. After step 2, Port_SetPinMode should report error PORT_E_MODE_UNCHANGEABLE (0x0E) to DET with service Id is 0x04.";PORT_IT_DRV_013.xdm;Auto;Abnormal;;PORT_IT_DRV_013.c;sram_test.mac;+ATF_PASSED;SRS_Port_12125;SAD_PORT_03;TST_IT_GN, TST_IT_AC;
+14;DRV;PORT_IT_DRV_014;"[Tested functionality]
+To check if Port_SetPinMode API reports the error PORT_E_PARAM_INVALID_MODE when invalid mode is passed.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PortSetPinModeApi is true
+3. Pin is configured with ModeChangeable = TRUE";"1. Invoke Port_Init API with a valid config pointer.
+2. Invoke Port_SetPinMode API with Mode > 7.";"1. After step 1, no error should be reported to DET.
+2. After step 2, Port_SetPinMode should report error PORT_E_PARAM_INVALID_MODE (0x0D) to DET with service Id is 0x04.";PORT_IT_DRV_014.xdm;Auto;Abnormal;;PORT_IT_DRV_014.c;sram_test.mac;+ATF_PASSED;SRS_Port_12125;SAD_PORT_03;TST_IT_GN, TST_IT_AC;
+15;DRV;PORT_IT_DRV_015;"[Tested functionality]
+To check if Port_SetPinMode API changes pin mode successfully.
+
+[Pre-conditions]
+1. PortSetPinModeApi is true
+2. Pin is configured with ModeChangeable = TRUE";"1. Invoke Port_Init API with a valid config pointer.
+2. Invoke Port_SetPinMode API with Mode = 2 (ALT2).
+3. Read back PORT PCR register.";"1. After step 1, no error should be reported to DET.
+2. After step 2, no error should be reported to DET.
+3. After step 3, the MUX field in PCR should be 2.";PORT_IT_DRV_015.xdm;Auto;Normal;;PORT_IT_DRV_015.c;sram_test.mac;+ATF_PASSED;SRS_Port_12125;SAD_PORT_03;TST_IT_GN;
+16;DRV;PORT_IT_DRV_016;"[Tested functionality]
+To check if Port_RefreshPortDirection API reports the error PORT_E_UNINIT when Port is not initialized.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. Port_Init has NOT been called";1. Invoke Port_RefreshPortDirection API without calling Port_Init first.;1. After step 1, Port_RefreshPortDirection should report error PORT_E_UNINIT (0x0F) to DET with service Id is 0x02.;PORT_IT_DRV_016.xdm;Auto;Abnormal;;PORT_IT_DRV_016.c;sram_test.mac;+ATF_PASSED;SRS_Port_12060, SRS_BSW_00406;SAD_PORT_04;TST_IT_GN, TST_IT_AC;
+17;DRV;PORT_IT_DRV_017;"[Tested functionality]
+To check if Port_RefreshPortDirection API refreshes direction of unchangeable pins.
+
+[Pre-conditions]
+1. Pin is configured with DirectionChangeable = FALSE";"1. Invoke Port_Init API with a valid config pointer.
+2. Manually modify PDDR register for a direction-unchangeable pin.
+3. Invoke Port_RefreshPortDirection API.
+4. Read back GPIO PDDR register.";"1. After step 1, no error should be reported to DET.
+2. After step 2, PDDR is modified.
+3. After step 3, no error should be reported to DET.
+4. After step 4, the PDDR bit should be restored to the configured value.";PORT_IT_DRV_017.xdm;Auto;Normal;;PORT_IT_DRV_017.c;sram_test.mac;+ATF_PASSED;SRS_Port_12060, SRS_Port_12061;SAD_PORT_04;TST_IT_GN;
+18;DRV;PORT_IT_DRV_018;"[Tested functionality]
+To check if Port_RefreshPortDirection API does NOT refresh direction of changeable pins.
+
+[Pre-conditions]
+1. Pin is configured with DirectionChangeable = TRUE";"1. Invoke Port_Init API with a valid config pointer.
+2. Change direction using Port_SetPinDirection.
+3. Invoke Port_RefreshPortDirection API.
+4. Read back GPIO PDDR register.";"1. After step 1, no error should be reported to DET.
+2. After step 2, PDDR is changed.
+3. After step 3, no error should be reported to DET.
+4. After step 4, the PDDR bit should remain as modified (not refreshed to original).";PORT_IT_DRV_018.xdm;Auto;Normal;;PORT_IT_DRV_018.c;sram_test.mac;+ATF_PASSED;SRS_Port_12060, SRS_Port_12061;SAD_PORT_04;TST_IT_GN;
+19;DRV;PORT_IT_DRV_019;"[Tested functionality]
+To check if Port_GetVersionInfo API reports the error PORT_E_PARAM_POINTER when NULL pointer is passed.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PortVersionInfoApi is true";1. Invoke Port_GetVersionInfo API with a NULL pointer.;1. After step 1, Port_GetVersionInfo should report error PORT_E_PARAM_POINTER (0x10) to DET with service Id is 0x03.;PORT_IT_DRV_019.xdm;Auto;Abnormal;;PORT_IT_DRV_019.c;sram_test.mac;+ATF_PASSED;SRS_BSW_00407;SAD_PORT_05;TST_IT_GN, TST_IT_AC;
+20;DRV;PORT_IT_DRV_020;"[Tested functionality]
+To check if Port_GetVersionInfo API returns correct version information.
+
+[Pre-conditions]
+1. PortVersionInfoApi is true";1. Invoke Port_GetVersionInfo API with a valid parameter.;"1. After step 1, no error should be reported to DET.
+2. Port_GetVersionInfo should return:
+- vendorID = 43
+- moduleID = 124
+- sw_major_version = 1
+- sw_minor_version = 0
+- sw_patch_version = 0";PORT_IT_DRV_020.xdm;Auto;Normal;;PORT_IT_DRV_020.c;sram_test.mac;+ATF_PASSED;SRS_BSW_00407, SRS_BSW_00003;SAD_PORT_05;TST_IT_GN;
+21;DRV;PORT_IT_DRV_021;"[Tested functionality]
+To check if Port_SetAsUnusedPin API reports the error PORT_E_UNINIT when Port is not initialized.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PortSetAsUnusedPinApi is true
+3. Port_Init has NOT been called";1. Invoke Port_SetAsUnusedPin API without calling Port_Init first.;1. After step 1, Port_SetAsUnusedPin should report error PORT_E_UNINIT (0x0F) to DET with service Id is 0x05.;PORT_IT_DRV_021.xdm;Auto;Abnormal;;PORT_IT_DRV_021.c;sram_test.mac;+ATF_PASSED;SRS_Port_12302, SRS_BSW_00406;SAD_PORT_06;TST_IT_GN, TST_IT_AC;
+22;DRV;PORT_IT_DRV_022;"[Tested functionality]
+To check if Port_SetAsUnusedPin API reports the error PORT_E_PARAM_PIN when invalid pin ID is passed.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PortSetAsUnusedPinApi is true
+3. Port_Init has been called";"1. Invoke Port_Init API with a valid config pointer.
+2. Invoke Port_SetAsUnusedPin API with Pin ID >= NumPins.";"1. After step 1, no error should be reported to DET.
+2. After step 2, Port_SetAsUnusedPin should report error PORT_E_PARAM_PIN (0x0A) to DET with service Id is 0x05.";PORT_IT_DRV_022.xdm;Auto;Abnormal;;PORT_IT_DRV_022.c;sram_test.mac;+ATF_PASSED;SRS_Port_12302, SRS_BSW_00323;SAD_PORT_06;TST_IT_GN, TST_IT_AC;
+23;DRV;PORT_IT_DRV_023;"[Tested functionality]
+To check if Port_SetAsUnusedPin API configures pin with unused pin properties.
+
+[Pre-conditions]
+1. PortSetAsUnusedPinApi is true
+2. UnusedPadConfig is configured";"1. Invoke Port_Init API with a valid config pointer.
+2. Invoke Port_SetAsUnusedPin API with a valid pin ID.
+3. Read back GPIO and PORT registers.";"1. After step 1, no error should be reported to DET.
+2. After step 2, no error should be reported to DET.
+3. After step 3, the pin should be configured according to UnusedPadConfig properties.";PORT_IT_DRV_023.xdm;Auto;Normal;;PORT_IT_DRV_023.c;sram_test.mac;+ATF_PASSED;SRS_Port_12302;SAD_PORT_06;TST_IT_GN;
+24;DRV;PORT_IT_DRV_024;"[Tested functionality]
+To check if Port_SetAsUsedPin API reports the error PORT_E_UNINIT when Port is not initialized.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PortSetAsUnusedPinApi is true
+3. Port_Init has NOT been called";1. Invoke Port_SetAsUsedPin API without calling Port_Init first.;1. After step 1, Port_SetAsUsedPin should report error PORT_E_UNINIT (0x0F) to DET with service Id is 0x06.;PORT_IT_DRV_024.xdm;Auto;Abnormal;;PORT_IT_DRV_024.c;sram_test.mac;+ATF_PASSED;SRS_Port_12303, SRS_BSW_00406;SAD_PORT_07;TST_IT_GN, TST_IT_AC;
+25;DRV;PORT_IT_DRV_025;"[Tested functionality]
+To check if Port_SetAsUsedPin API reports the error PORT_E_PARAM_PIN when invalid pin ID is passed.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PortSetAsUnusedPinApi is true
+3. Port_Init has been called";"1. Invoke Port_Init API with a valid config pointer.
+2. Invoke Port_SetAsUsedPin API with Pin ID >= NumPins.";"1. After step 1, no error should be reported to DET.
+2. After step 2, Port_SetAsUsedPin should report error PORT_E_PARAM_PIN (0x0A) to DET with service Id is 0x06.";PORT_IT_DRV_025.xdm;Auto;Abnormal;;PORT_IT_DRV_025.c;sram_test.mac;+ATF_PASSED;SRS_Port_12303, SRS_BSW_00323;SAD_PORT_07;TST_IT_GN, TST_IT_AC;
+26;DRV;PORT_IT_DRV_026;"[Tested functionality]
+To check if Port_SetAsUsedPin API re-configures pin with original Port_Init properties.
+
+[Pre-conditions]
+1. PortSetAsUnusedPinApi is true";"1. Invoke Port_Init API with a valid config pointer.
+2. Invoke Port_SetAsUnusedPin API with a valid pin ID.
+3. Invoke Port_SetAsUsedPin API with the same pin ID.
+4. Read back GPIO and PORT registers.";"1. After step 1, no error should be reported to DET.
+2. After step 2, pin is configured as unused.
+3. After step 3, no error should be reported to DET.
+4. After step 4, the pin should be configured according to original IpConfig properties.";PORT_IT_DRV_026.xdm;Auto;Normal;;PORT_IT_DRV_026.c;sram_test.mac;+ATF_PASSED;SRS_Port_12303;SAD_PORT_07;TST_IT_GN;
+27;DRV;PORT_IT_DRV_027;"[Tested functionality]
+To check if Port_ResetPinMode API reports the error PORT_E_UNINIT when Port is not initialized.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PortResetPinModeApi is true
+3. Port_Init has NOT been called";1. Invoke Port_ResetPinMode API without calling Port_Init first.;1. After step 1, Port_ResetPinMode should report error PORT_E_UNINIT (0x0F) to DET with service Id is 0x07.;PORT_IT_DRV_027.xdm;Auto;Abnormal;;PORT_IT_DRV_027.c;sram_test.mac;+ATF_PASSED;SRS_Port_12126, SRS_BSW_00406;SAD_PORT_08;TST_IT_GN, TST_IT_AC;
+28;DRV;PORT_IT_DRV_028;"[Tested functionality]
+To check if Port_ResetPinMode API reports the error PORT_E_PARAM_PIN when invalid pin ID is passed.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PortResetPinModeApi is true
+3. Port_Init has been called";"1. Invoke Port_Init API with a valid config pointer.
+2. Invoke Port_ResetPinMode API with Pin ID >= NumPins.";"1. After step 1, no error should be reported to DET.
+2. After step 2, Port_ResetPinMode should report error PORT_E_PARAM_PIN (0x0A) to DET with service Id is 0x07.";PORT_IT_DRV_028.xdm;Auto;Abnormal;;PORT_IT_DRV_028.c;sram_test.mac;+ATF_PASSED;SRS_Port_12126, SRS_BSW_00323;SAD_PORT_08;TST_IT_GN, TST_IT_AC;
+29;DRV;PORT_IT_DRV_029;"[Tested functionality]
+To check if Port_ResetPinMode API reports the error PORT_E_MODE_UNCHANGEABLE when pin mode is not changeable.
+
+[Pre-conditions]
+1. PortDevErrorDetect is true
+2. PortResetPinModeApi is true
+3. Pin is configured with ModeChangeable = FALSE";"1. Invoke Port_Init API with a valid config pointer (pin configured as mode unchangeable).
+2. Invoke Port_ResetPinMode API with that pin.";"1. After step 1, no error should be reported to DET.
+2. After step 2, Port_ResetPinMode should report error PORT_E_MODE_UNCHANGEABLE (0x0E) to DET with service Id is 0x07.";PORT_IT_DRV_029.xdm;Auto;Abnormal;;PORT_IT_DRV_029.c;sram_test.mac;+ATF_PASSED;SRS_Port_12126;SAD_PORT_08;TST_IT_GN, TST_IT_AC;
+30;DRV;PORT_IT_DRV_030;"[Tested functionality]
+To check if Port_ResetPinMode API resets pin mode to original value.
+
+[Pre-conditions]
+1. PortResetPinModeApi is true
+2. PortSetPinModeApi is true
+3. Pin is configured with ModeChangeable = TRUE";"1. Invoke Port_Init API with a valid config pointer (initial mode = GPIO).
+2. Invoke Port_SetPinMode API with Mode = ALT2.
+3. Invoke Port_ResetPinMode API.
+4. Read back PORT PCR register.";"1. After step 1, no error should be reported to DET.
+2. After step 2, PCR MUX field = 2.
+3. After step 3, no error should be reported to DET.
+4. After step 4, the MUX field in PCR should be restored to original value (GPIO = 1).";PORT_IT_DRV_030.xdm;Auto;Normal;;PORT_IT_DRV_030.c;sram_test.mac;+ATF_PASSED;SRS_Port_12126;SAD_PORT_08;TST_IT_GN;
+31;DRV;PORT_IT_DRV_031;"[Tested functionality]
+Boundary Testing: Test Port_SetPinDirection with Pin ID = 0 (first pin).
+
+[Pre-conditions]
+1. PortSetPinDirectionApi is true
+2. Pin 0 is configured with DirectionChangeable = TRUE";"1. Invoke Port_Init API with a valid config pointer.
+2. Invoke Port_SetPinDirection API with Pin = 0, Direction = PORT_PIN_OUT.
+3. Invoke Port_SetPinDirection API with Pin = 0, Direction = PORT_PIN_IN.";"1. After step 1, no error should be reported to DET.
+2. After step 2, no error, PDDR bit 0 = 1.
+3. After step 3, no error, PDDR bit 0 = 0.";PORT_IT_DRV_031.xdm;Auto;Normal;;PORT_IT_DRV_031.c;sram_test.mac;+ATF_PASSED;SRS_Port_12405;SAD_PORT_02;TST_IT_BD;
+32;DRV;PORT_IT_DRV_032;"[Tested functionality]
+Boundary Testing: Test Port_SetPinDirection with Pin ID = NumPins-1 (last pin).
+
+[Pre-conditions]
+1. PortSetPinDirectionApi is true
+2. Last pin is configured with DirectionChangeable = TRUE";"1. Invoke Port_Init API with a valid config pointer.
+2. Invoke Port_SetPinDirection API with Pin = NumPins-1, Direction = PORT_PIN_OUT.
+3. Invoke Port_SetPinDirection API with Pin = NumPins-1, Direction = PORT_PIN_IN.";"1. After step 1, no error should be reported to DET.
+2. After step 2, no error, corresponding PDDR bit = 1.
+3. After step 3, no error, corresponding PDDR bit = 0.";PORT_IT_DRV_032.xdm;Auto;Normal;;PORT_IT_DRV_032.c;sram_test.mac;+ATF_PASSED;SRS_Port_12405;SAD_PORT_02;TST_IT_BD;
+33;DRV;PORT_IT_DRV_033;"[Tested functionality]
+Boundary Testing: Test Port_SetPinMode with Mode = 0 (ALT0/Analog).
+
+[Pre-conditions]
+1. PortSetPinModeApi is true
+2. Pin is configured with ModeChangeable = TRUE";"1. Invoke Port_Init API with a valid config pointer.
+2. Invoke Port_SetPinMode API with Mode = 0.";"1. After step 1, no error should be reported to DET.
+2. After step 2, no error, PCR MUX field = 0.";PORT_IT_DRV_033.xdm;Auto;Normal;;PORT_IT_DRV_033.c;sram_test.mac;+ATF_PASSED;SRS_Port_12125;SAD_PORT_03;TST_IT_BD;
+34;DRV;PORT_IT_DRV_034;"[Tested functionality]
+Boundary Testing: Test Port_SetPinMode with Mode = 7 (ALT7).
+
+[Pre-conditions]
+1. PortSetPinModeApi is true
+2. Pin is configured with ModeChangeable = TRUE";"1. Invoke Port_Init API with a valid config pointer.
+2. Invoke Port_SetPinMode API with Mode = 7.";"1. After step 1, no error should be reported to DET.
+2. After step 2, no error, PCR MUX field = 7.";PORT_IT_DRV_034.xdm;Auto;Normal;;PORT_IT_DRV_034.c;sram_test.mac;+ATF_PASSED;SRS_Port_12125;SAD_PORT_03;TST_IT_BD;
+35;DRV;PORT_IT_DRV_035;"[Tested functionality]
+Sequence Testing: Complete Port initialization and configuration sequence.
+
+[Pre-conditions]
+1. All APIs are enabled";"1. Invoke Port_Init API with a valid config pointer.
+2. Invoke Port_SetPinDirection to change direction of a pin.
+3. Invoke Port_SetPinMode to change mode of a pin.
+4. Invoke Port_RefreshPortDirection.
+5. Invoke Port_SetAsUnusedPin for a pin.
+6. Invoke Port_SetAsUsedPin for the same pin.
+7. Invoke Port_ResetPinMode for a mode-changeable pin.
+8. Invoke Port_GetVersionInfo.";"1. After each step, no error should be reported to DET.
+2. After step 2, pin direction changed.
+3. After step 3, pin mode changed.
+4. After step 4, unchangeable pins refreshed.
+5. After step 5, pin configured as unused.
+6. After step 6, pin restored to original config.
+7. After step 7, pin mode reset to original.
+8. After step 8, version info returned correctly.";PORT_IT_DRV_035.xdm;Auto;Normal;;PORT_IT_DRV_035.c;sram_test.mac;+ATF_PASSED;SRS_Port_12001;SAD_PORT_01, SAD_PORT_02, SAD_PORT_03, SAD_PORT_04, SAD_PORT_05, SAD_PORT_06, SAD_PORT_07, SAD_PORT_08;TST_IT_SQ;
+36;DRV;PORT_IT_DRV_036;"[Tested functionality]
+GPIO Output functionality: Toggle LED using Port driver.
+
+[Pre-conditions]
+1. Pin is configured as GPIO output (e.g., PTD0 - Blue LED on S32K144 EVB)";"1. Invoke Port_Init API with a valid config pointer.
+2. Write HIGH to the GPIO pin using direct register access.
+3. Read back GPIO PDOR register.
+4. Write LOW to the GPIO pin.
+5. Read back GPIO PDOR register.";"1. After step 1, no error should be reported to DET.
+2. After step 2, LED should be ON.
+3. After step 3, PDOR bit = 1.
+4. After step 4, LED should be OFF.
+5. After step 5, PDOR bit = 0.";PORT_IT_DRV_036.xdm;Auto;Normal;;PORT_IT_DRV_036.c;sram_test.mac;+ATF_PASSED;SRS_Port_12001;SAD_PORT_01;TST_IT_GN;
+37;DRV;PORT_IT_DRV_037;"[Tested functionality]
+GPIO Input functionality: Read button state using Port driver.
+
+[Pre-conditions]
+1. Pin is configured as GPIO input (e.g., PTC12 - SW2 on S32K144 EVB)";"1. Invoke Port_Init API with a valid config pointer.
+2. Read GPIO PDIR register when button is not pressed.
+3. Read GPIO PDIR register when button is pressed.";"1. After step 1, no error should be reported to DET.
+2. After step 2, PDIR bit = 1 (pull-up, not pressed).
+3. After step 3, PDIR bit = 0 (pressed, grounded).";PORT_IT_DRV_037.xdm;Manual;Normal;;PORT_IT_DRV_037.c;sram_test.mac;;SRS_Port_12001;SAD_PORT_01;TST_IT_GN;Requires manual button press
+38;DRV;PORT_IT_DRV_038;"[Tested functionality]
+Alternate Function: Configure pin for UART TX functionality.
+
+[Pre-conditions]
+1. Pin is configured as ALT2 for LPUART TX (e.g., PTC7)";"1. Invoke Port_Init API with pin configured for UART TX.
+2. Read PORT PCR register.";"1. After step 1, no error should be reported to DET.
+2. After step 2, PCR MUX field = ALT function for UART.";PORT_IT_DRV_038.xdm;Auto;Normal;;PORT_IT_DRV_038.c;sram_test.mac;+ATF_PASSED;SRS_Port_12001;SAD_PORT_01;TST_IT_GN;
+39;DRV;PORT_IT_DRV_039;"[Tested functionality]
+Pull Configuration: Verify pull-up resistor is enabled.
+
+[Pre-conditions]
+1. Pin is configured with internal pull-up enabled";"1. Invoke Port_Init API with pin configured with pull-up.
+2. Read PORT PCR register.";"1. After step 1, no error should be reported to DET.
+2. After step 2, PCR PE bit = 1 and PS bit = 1 (pull-up).";PORT_IT_DRV_039.xdm;Auto;Normal;;PORT_IT_DRV_039.c;sram_test.mac;+ATF_PASSED;SRS_Port_12001;SAD_PORT_01;TST_IT_GN;
+40;DRV;PORT_IT_DRV_040;"[Tested functionality]
+Pull Configuration: Verify pull-down resistor is enabled.
+
+[Pre-conditions]
+1. Pin is configured with internal pull-down enabled";"1. Invoke Port_Init API with pin configured with pull-down.
+2. Read PORT PCR register.";"1. After step 1, no error should be reported to DET.
+2. After step 2, PCR PE bit = 1 and PS bit = 0 (pull-down).";PORT_IT_DRV_040.xdm;Auto;Normal;;PORT_IT_DRV_040.c;sram_test.mac;+ATF_PASSED;SRS_Port_12001;SAD_PORT_01;TST_IT_GN;
+41;DRV;PORT_IT_DRV_041;"[Tested functionality]
+Drive Strength Configuration: Verify high drive strength is enabled.
+
+[Pre-conditions]
+1. Pin is configured with high drive strength";"1. Invoke Port_Init API with pin configured with high drive strength.
+2. Read PORT PCR register.";"1. After step 1, no error should be reported to DET.
+2. After step 2, PCR DSE bit = 1 (high drive strength).";PORT_IT_DRV_041.xdm;Auto;Normal;;PORT_IT_DRV_041.c;sram_test.mac;+ATF_PASSED;SRS_Port_12001;SAD_PORT_01;TST_IT_GN;
+42;DRV;PORT_IT_DRV_042;"[Tested functionality]
+Lock Register: Verify pin configuration is locked.
+
+[Pre-conditions]
+1. Pin is configured with lock register enabled";"1. Invoke Port_Init API with pin configured with lock enabled.
+2. Read PORT PCR register.
+3. Attempt to modify PCR register.";"1. After step 1, no error should be reported to DET.
+2. After step 2, PCR LK bit = 1 (locked).
+3. After step 3, PCR should remain unchanged (locked).";PORT_IT_DRV_042.xdm;Auto;Normal;;PORT_IT_DRV_042.c;sram_test.mac;+ATF_PASSED;SRS_Port_12001;SAD_PORT_01;TST_IT_GN;
